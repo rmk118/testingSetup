@@ -3,6 +3,9 @@ library(tidyverse)
 library(lubridate)
 library(car)
 library(ARTool)
+library(tidyquant)
+library(plotrix)
+library(patchwork)
 
 #Input data and convert to factors
 data<-read.csv("through10_17.csv") %>% 
@@ -88,3 +91,74 @@ dataSum6<- data %>%
             cr3 = mean(Cup.ratio, na.rm = TRUE))
 
 ggplot(dataSum6, aes(x=Date, y=cr3, color=Gear)) +geom_line()
+
+
+hobo<-read.csv("hobo.csv")
+hobo$Date.time<-mdy_hms(hobo$Date.time)
+str(hobo)
+#all temps
+ggplot(hobo, aes(x=Date.time, y=Temp, group=Location, color=Location))+ geom_line()+ylab("Temperature (°C)")+xlab("")+theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+
+noAir<- hobo[hobo$High.sal>5,]
+ggplot(noAir, aes(x=Date.time, y=Temp, group=Location, color=Location))+ geom_line()+ylab("Temperature (°C)")+xlab("")+theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+tempRolling<-ggplot(hobo, aes(x=Date.time, y=Temp, group=Location, color=Location))+ geom_line(alpha=0)+geom_ma(n=24, linetype="solid")+ylab("Temperature (°C)")+xlab("")+theme(axis.title.y = element_text(margin = margin(r = 10)))+scale_y_continuous(limits=c(12.5, 22.5))
+tempRolling
+
+#all sal - super weird
+ggplot(hobo, aes(x=Date.time, y=High.sal, group=Location, color=Location))+ geom_line()+ylab("Salinity")+xlab("")+theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+
+turbidity<-read.csv("turbidity.csv")
+turbidity$Date<-mdy(turbidity$Date)
+turbidity$Location<-as.factor(turbidity$Location)
+str(turbidity)
+
+turbiditySummary<- turbidity %>% 
+  group_by(Location, Date) %>% 
+  summarise(se = std.error(Turbidity, na.rm = TRUE),
+            meanTurbidity = mean(Turbidity, na.rm = TRUE))
+
+turbiditySummary
+
+turbidityGraph<-ggplot(turbiditySummary, aes(x=Date, y=meanTurbidity, group=Location, color=Location))+ geom_line()+ylab("Turbidity")+xlab("")+theme(axis.title.y = element_text(margin = margin(r = 10)))+geom_errorbar(aes(ymin=meanTurbidity+se, ymax=meanTurbidity-se), width=.2,position=position_dodge(0.05))
+
+
+
+# ChlA --------------------------------------------------------------------
+
+ChlaDatasheet<-read.csv("chlA.csv")
+ChlaDatasheet<- ChlaDatasheet %>% 
+  filter(Major_issue == FALSE) %>% 
+  mutate(Date = mdy(Trial_Date)) %>% 
+  select(Location, Acetone_vol, Tube_Num, Vol_Filtered, Fo, Fa, Fo.Fa, Date) %>% 
+  mutate(Location = as.factor(Location))
+
+ChlFs = 0.000482
+FoFa_max = 1.7718
+
+str(ChlaDatasheet)
+
+ChlaDatasheet = ChlaDatasheet %>%
+  mutate(Ave_Chl1 = (ChlFs*(FoFa_max/(FoFa_max-1))* 
+                       (ChlaDatasheet$Fo-ChlaDatasheet$Fa)*
+                       (((ChlaDatasheet$Acetone_vol)/ChlaDatasheet$Vol_Filtered))))
+
+ChlaDatasheet = ChlaDatasheet %>%
+  mutate(ChlaDatasheet, Ave_Phaeo1 = ((ChlFs*(FoFa_max/(FoFa_max-1)))*
+                                        ((FoFa_max-1)*(ChlaDatasheet$Fo-ChlaDatasheet$Fa))*(((ChlaDatasheet$Acetone_vol)/ChlaDatasheet$Vol_Filtered))))
+
+ChlaDatasheet <- ChlaDatasheet %>% 
+  group_by(Date, Location) %>% 
+  summarise(mean = mean(Ave_Chl1),
+            se = std.error(Ave_Chl1))
+
+chlaGraph<-ggplot(ChlaDatasheet, aes(x=Date, y=mean, group=Location, color=Location)) + geom_line()+ylab("Chlorophyll A (μg/L)")+xlab("")+ theme(axis.title.y = element_text(margin = margin(r = 10)))+geom_errorbar(aes(ymin=mean+se, ymax=mean-se), width=.2,position=position_dodge(0.05))
+
+
+# all environmental graphs ------------------------------------------------
+
+
+
+tempRolling + turbidityGraph + chlaGraph + plot_layout(nrow=3, guides = "collect") & theme(legend.position = "bottom")
