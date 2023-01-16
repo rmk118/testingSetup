@@ -139,6 +139,9 @@ eqn <- sprintf(
 )
 #* ',' ~~ italic(r)^2 ~ '=' ~ %.2g
 
+model.r2 = rfit(diffScore ~ Acreage, data = noOutlier)
+summary(model.r2)
+modelSum2<-summary(model.r2)
 
 eqn2 <- sprintf(
   "italic(y) == %.3g + %.2g * italic(x) * ',' ~~ italic(p) ~ '=' ~ %.3g",
@@ -148,9 +151,7 @@ eqn2 <- sprintf(
   modelSum2$coefficients[2,4]
 )
 
-model.r2 = rfit(diffScore ~ Acreage, data = noOutlier)
-summary(model.r2)
-modelSum2<-summary(model.r2)
+
 
 scatterAll<-ggplot(data, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
   annotate(
@@ -169,6 +170,16 @@ scatterNoOutlier<-ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+t
     hjust = 1.1, vjust = -1.1
   )
 scatterNoOutlier
+
+scatterNoOutlier<-ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
+  annotate(
+    "text",
+    x =15, y = 10,
+    label = eqn2, parse = TRUE
+  )
+scatterNoOutlier+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
+
+
 
 scatterAll + scatterNoOutlier + plot_annotation(tag_levels = 'A') & theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
 
