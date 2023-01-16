@@ -3,6 +3,8 @@
 
 library(tidyverse)
 library(rstatix)
+library(MASS)
+
 #Input data
 data<-read.csv("difficulty.csv")
 
@@ -108,44 +110,18 @@ ggplot(noOutlier, aes(x=Acreage, fill=pound))+geom_histogram(binwidth = 1, alpha
 #fit ordinary least squares regression model
 ols <- lm(diffScore~Acreage, data=data)
 
-#create plot of y-values vs. standardized residuals
-plot(data$diffScore, rstandard(ols), ylab='Standardized Residuals', xlab='y') 
-abline(h=0)
-
-qqplot(ols)
-library(ggfortify)
-autoplot(ols)
-
 par(mfrow = c(2, 2))
 plot(ols)
 summary(ols)
 
 
-library(MASS)
-
 #fit robust regression model
-robust <- rlm(diffScore~Acreage, data=data, psi = psi.huber)
+robust <- rlm(diffScore~Acreage, data=data, psi = psi.bisquare)
 robust
 summary(robust)
 
 
-#fit ordinary least squares regression model
-ols2 <- lm(diffScore~Acreage, data=dataSmall)
+library(Rfit)
 
-#create plot of y-values vs. standardized residuals
-plot(dataSmall$diffScore, rstandard(ols2), ylab='Standardized Residuals', xlab='y') 
-abline(h=0)
-
-qqplot(ols)
-library(ggfortify)
-autoplot(ols)
-
-par(mfrow = c(2, 2))
-plot(ols2)
-summary(ols2)$r.squared
-
-#fit robust regression model
-robust <- rlm(diffScore~Acreage, data=data)
-robust
-summary(robust)$r.squared
-
+model.r = rfit(diffScore ~ Acreage, data = noOutlier)
+summary(model.r)
