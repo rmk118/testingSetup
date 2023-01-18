@@ -252,3 +252,13 @@ anova(mod_lm3, mod_lm2, test = "Chisq")
 
 
 ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam")
+
+wilcox.test(data=data, diffScore ~ leaseType)
+
+data %>% group_by(leaseType) %>%
+  get_summary_stats(numConditions, type="common")
+
+data %>% group_by(appType) %>%
+  get_summary_stats(numConditions, type="common")
+noExp <- data %>% filter(appType != "Aquaculture lease expansion")
+kruskal.test(data=noExp, diffScore ~ appType)
