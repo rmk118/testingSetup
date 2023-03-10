@@ -1,5 +1,5 @@
 #Difficulty Scoring Analysis
-#RK 1/16/23
+#RK 3/10/23
 
 library(tidyverse)
 library(rstatix)
@@ -24,7 +24,8 @@ data<- data %>%
     pound = Pound.,
     appType = App.type..most.recent.included.in.lease.decision.PDF.,
     leaseType = Lease.Type,
-    areaMod = Alteration.of.lease.area
+    areaMod = Alteration.of.lease.area,
+    pageLen = App..length..pages.
   )
 
 mean(data$Acreage) #mean acreage = 7.05
@@ -33,7 +34,8 @@ data<- data %>%
   mutate(
     leaseType = as.factor(leaseType),
     appType = as.factor(appType),
-    pound = as.factor(pound))
+    pound = as.factor(pound),
+    Waterbody = as.factor(Waterbody))
 
 #Subsets of data
 Pounds <- data %>% filter(pound == "Yes")
@@ -171,6 +173,7 @@ scatterNoOutlier<-ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+t
   )
 scatterNoOutlier
 
+#FIGURE 1
 scatterNoOutlier<-ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
   annotate(
     "text",
@@ -178,7 +181,6 @@ scatterNoOutlier<-ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+t
     label = eqn2, parse = TRUE
   )
 scatterNoOutlier+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
-
 
 
 scatterAll + scatterNoOutlier + plot_annotation(tag_levels = 'A') & theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
@@ -205,9 +207,6 @@ scatterSmaller<-ggplot(dataSmaller, aes(x=Acreage, y=diffScore))+ geom_point()+t
 
 
 
-
-# test<-lm(formula = diffScore ~ Acreage * App..length..pages., data = noOutlier)     
-# summary(test)
 
 # test2<-lm(formula = diffScore ~ Acreage, data = noOutlier)     
 # summary(test2)
@@ -262,3 +261,102 @@ data %>% group_by(appType) %>%
   get_summary_stats(numConditions, type="common")
 noExp <- data %>% filter(appType != "Aquaculture lease expansion")
 kruskal.test(data=noExp, diffScore ~ appType)
+
+
+
+scatterNoOutlierColored<-ggplot(noOutlier, aes(x=Acreage, y=diffScore, color=leaseType))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
+  annotate(
+    "text",
+    x =15, y = 10,
+    label = eqn2, parse = TRUE
+  )
+scatterNoOutlierColored+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
+
+mod_lm4 = gam(diffScore ~ s(Acreage) + Waterbody, data = noOutlier, method="REML")
+summary(mod_lm4)
+plot(mod_lm4, all.terms = TRUE, pages=1)
+gam.check(mod_lm4)
+
+mod_lm5 = gam(diffScore ~ s(Acreage, pageLen), data = noOutlier, method="REML")
+summary(mod_lm5)
+gam.check(mod_lm5)
+
+mod_lm6 = gam(diffScore ~ s(Acreage, pageLen) + Waterbody, data = noOutlier, method="REML")
+summary(mod_lm6) #R-sq.(adj) =  0.658   Deviance explained = 79.9%
+gam.check(mod_lm6)
+
+
+ggplot(data = noOutlier) +
+  geom_point(aes(x = Acreage, y = diffScore)) +
+  theme_bw()+ 
+  geom_smooth(method="gam", formula= diffScore~s(Acreage,pageLen)+Waterbody)
+
+ggplot(data = noOutlier, mapping = aes(x = Acreage, y = diffScore)) +
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method="gam", formula= diffScore ~ s(Acreage,pageLen) + Waterbody)
+
+plot.gam(mod_lm6)
+
+# County analysis ---------------------------------------------------------
+
+data$Town<-as.factor(data$Town)
+
+York<-c("Eliot", "Wells")
+Hancock<-c("Bar Harbor", "Blue Hill", "Brooksville", "Brooksville and Sedgwick", "Cranberry Isles", "Deer Isle", "Franklin", "Gouldsboro", "Hancock", "Lamoine", "Sorrento", "Swan's Island", "Trenton" )
+Washington<-c("Beals", "Cutler", "Steuben")
+Lincoln<-c("Boothbay", "Bremen", "Bristol and Damariscotta", "Bristol and S. Bristol", "South Bristol", "Damariscotta", "Damariscotta/Newcastle", "Edgecomb", "Newcastle", "Newcastle/Damariscotta", "Walpole")
+Cumberland<-c("Brunswick", "Chebeague I. and Long I.", "Chebeague Island","Cumberland","Falmouth", "Freeport", "South Freeport", "Harpswell", "Scarborough", "Yarmouth")
+Knox<-c("Cushing", "Friendship", "North Haven", "South Thomaston")
+Sagadahoc<-c("Georgetown", "Phippsburg", "West Bath")
+
+dataCounties<- noOutlier %>% 
+  mutate(county=NA)
+
+York<- dataCounties %>% 
+  group_by(Town) %>% 
+  filter(grepl("Eliot|Wells",Town)) %>% 
+  mutate(county="York")
+
+Hancock<- dataCounties %>% 
+  group_by(Town) %>% 
+  filter(grepl("Bar Harbor|Blue Hill|Brooksville|Brooksville and Sedgwick|Cranberry Isles|Deer Isle|Franklin|Gouldsboro|Hancock|Lamoine|Sorrento|Swan's Island|Trenton",Town)) %>% 
+  mutate(county="Hancock")
+
+Washington<- dataCounties %>% 
+  group_by(Town) %>% 
+  filter(grepl("Beals|Cutler|Steuben",Town)) %>% 
+  mutate(county="Washington")
+
+Lincoln<- dataCounties %>% 
+  group_by(Town) %>% 
+  filter(grepl("Boothbay|Bremen|Bristol and Damariscotta|Bristol and S. Bristol|South Bristol|Damariscotta|Damariscotta/Newcastle|Edgecomb|Newcastle|Newcastle/Damariscotta|Walpole", Town)) %>% 
+  mutate(county="Lincoln")
+         
+Cumberland<- dataCounties %>% 
+  group_by(Town) %>% 
+  filter(grepl("Brunswick|Chebeague I. and Long I.|Chebeague Island|Cumberland|Falmouth|Freeport|South Freeport|Harpswell|Scarborough|Yarmouth",Town)) %>% 
+  mutate(county="Cumberland")
+
+Knox<- dataCounties %>% 
+  group_by(Town) %>% 
+  filter(grepl("Cushing|Friendship|North Haven|South Thomaston", Town)) %>% 
+  mutate(county="Knox")
+
+Sagadahoc<- dataCounties %>% 
+  group_by(Town) %>% 
+  filter(grepl("Georgetown|Phippsburg|West Bath", Town)) %>% 
+  mutate(county="Sagadahoc")
+
+dataCounties<-bind_rows(York, Hancock, Washington, Lincoln, Cumberland, Knox, Sagadahoc)
+ 
+scatterCounty<-ggplot(dataCounties, aes(x=Acreage, y=diffScore, color=county, fill=county))+ geom_point()+theme_classic()
+
+ggplot(data = dataCounties) +
+  geom_point(aes(x=Acreage, y=diffScore, color=county)) +
+  theme_bw() +
+  geom_smooth(aes(x=Acreage, y=diffScore, color=county), se=FALSE,
+              method = "lm")
+
+mod_lmCounty = gam(diffScore ~ s(Acreage, pageLen) + Waterbody + county, data = dataCounties)
+summary(mod_lmCounty)
+gam.check(mod_lmCounty)
