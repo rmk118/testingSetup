@@ -8,6 +8,7 @@ library(Rfit)
 library(patchwork)
 library(ggpubr)
 library(ggpmisc)
+library(itsadug)
 
 #Input data
 data<-read.csv("difficulty.csv")
@@ -41,6 +42,7 @@ data<- data %>%
 Pounds <- data %>% filter(pound == "Yes")
 noPound <- data %>% filter(pound == "No")
 noOutlier<- data %>% filter(Acreage < 60)
+noCV<- noOutlier %>% filter(pageLen < 80)
 
 mean(Pounds$diffScore) #0.4
 sd(Pounds$diffScore) #0.55
@@ -205,30 +207,6 @@ scatterSmaller<-ggplot(dataSmaller, aes(x=Acreage, y=diffScore))+ geom_point()+t
 
 
 
-
-
-
-# test2<-lm(formula = diffScore ~ Acreage, data = noOutlier)     
-# summary(test2)
-# 
-# #fit ordinary least squares regression model
-ols <- lm(diffScore~Acreage, data=data)
-par(mfrow = c(2, 2))
-plot(ols)
- summary(ols)
- 
- olsNoOutlier <-lm(diffScore~Acreage, data=noOutlier)
- summary(olsNoOutlier)
- par(mfrow = c(2, 2))
- plot(olsNoOutlier)
-
- AIC(olsNoOutlier)
-#fit robust regression model - no p-values
-# robust <- rlm(diffScore~Acreage, data=data)
-# robust
-# summary(robust)
-
-
 library(mgcv)
 
 mod_lm = gam(diffScore ~ s(Acreage, bs = "cr"), data = data)
@@ -245,12 +223,10 @@ mod_lm3 = gam(diffScore ~ s(Acreage), data = noOutlier)
 summary(mod_lm3)
 plot(mod_lm3)
 
-AIC(mod_lm3)
 
-anova(mod_lm3, mod_lm2, test = "Chisq")
+ggplot(noCV, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam")
 
-
-ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam")
+ggplot(noCV, aes(x=pageLen, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam")
 
 wilcox.test(data=data, diffScore ~ leaseType)
 
@@ -272,91 +248,32 @@ scatterNoOutlierColored<-ggplot(noOutlier, aes(x=Acreage, y=diffScore, color=lea
   )
 scatterNoOutlierColored+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
 
-mod_lm4 = gam(diffScore ~ s(Acreage) + Waterbody, data = noOutlier, method="REML")
+mod_lm4 = gam(diffScore ~ s(Acreage) + Waterbody, data = noOutlier)
 summary(mod_lm4)
 plot(mod_lm4, all.terms = TRUE, pages=1)
 gam.check(mod_lm4)
 
-mod_lm5 = gam(diffScore ~ s(Acreage, pageLen), data = noOutlier, method="REML")
+mod_lm5 = gam(diffScore ~ s(Acreage, pageLen), data = noOutlier)
 summary(mod_lm5)
 gam.check(mod_lm5)
 
-mod_lm6 = gam(diffScore ~ s(Acreage, pageLen) + Waterbody, data = noOutlier, method="REML")
+mod_lm6 = gam(diffScore ~ s(Acreage, pageLen) + Waterbody, data = noOutlier)
 summary(mod_lm6) #R-sq.(adj) =  0.658   Deviance explained = 79.9%
+concurvity(mod_lm6)
 gam.check(mod_lm6)
 
+mod_lm8 = gam(diffScore ~ s(Acreage) + s(pageLen), data = noCV)
 
-ggplot(data = noOutlier) +
-  geom_point(aes(x = Acreage, y = diffScore)) +
-  theme_bw()+ 
-  geom_smooth(method="gam", formula= diffScore~s(Acreage,pageLen)+Waterbody)
+summary(mod_lm8)
 
-ggplot(data = noOutlier, mapping = aes(x = Acreage, y = diffScore)) +
-  geom_point(size = 0.5, alpha = 0.5) +
-  geom_smooth(method="gam", formula= diffScore ~ s(Acreage,pageLen) + Waterbody)
+gam.check(mod_lm8)
 
-plot.gam(mod_lm6)
 
-# County analysis ---------------------------------------------------------
+mod_lm7 = gam(diffScore ~ s(Acreage) + s(pageLen) + Waterbody, data = noCV)
+summary(mod_lm7)
+gam.check(mod_lm7)
+gamtabs(mod_lm7, type="HTML")
 
-data$Town<-as.factor(data$Town)
+plot(mod_lm7, pages=1)
 
-York<-c("Eliot", "Wells")
-Hancock<-c("Bar Harbor", "Blue Hill", "Brooksville", "Brooksville and Sedgwick", "Cranberry Isles", "Deer Isle", "Franklin", "Gouldsboro", "Hancock", "Lamoine", "Sorrento", "Swan's Island", "Trenton" )
-Washington<-c("Beals", "Cutler", "Steuben")
-Lincoln<-c("Boothbay", "Bremen", "Bristol and Damariscotta", "Bristol and S. Bristol", "South Bristol", "Damariscotta", "Damariscotta/Newcastle", "Edgecomb", "Newcastle", "Newcastle/Damariscotta", "Walpole")
-Cumberland<-c("Brunswick", "Chebeague I. and Long I.", "Chebeague Island","Cumberland","Falmouth", "Freeport", "South Freeport", "Harpswell", "Scarborough", "Yarmouth")
-Knox<-c("Cushing", "Friendship", "North Haven", "South Thomaston")
-Sagadahoc<-c("Georgetown", "Phippsburg", "West Bath")
-
-dataCounties<- noOutlier %>% 
-  mutate(county=NA)
-
-York<- dataCounties %>% 
-  group_by(Town) %>% 
-  filter(grepl("Eliot|Wells",Town)) %>% 
-  mutate(county="York")
-
-Hancock<- dataCounties %>% 
-  group_by(Town) %>% 
-  filter(grepl("Bar Harbor|Blue Hill|Brooksville|Brooksville and Sedgwick|Cranberry Isles|Deer Isle|Franklin|Gouldsboro|Hancock|Lamoine|Sorrento|Swan's Island|Trenton",Town)) %>% 
-  mutate(county="Hancock")
-
-Washington<- dataCounties %>% 
-  group_by(Town) %>% 
-  filter(grepl("Beals|Cutler|Steuben",Town)) %>% 
-  mutate(county="Washington")
-
-Lincoln<- dataCounties %>% 
-  group_by(Town) %>% 
-  filter(grepl("Boothbay|Bremen|Bristol and Damariscotta|Bristol and S. Bristol|South Bristol|Damariscotta|Damariscotta/Newcastle|Edgecomb|Newcastle|Newcastle/Damariscotta|Walpole", Town)) %>% 
-  mutate(county="Lincoln")
-         
-Cumberland<- dataCounties %>% 
-  group_by(Town) %>% 
-  filter(grepl("Brunswick|Chebeague I. and Long I.|Chebeague Island|Cumberland|Falmouth|Freeport|South Freeport|Harpswell|Scarborough|Yarmouth",Town)) %>% 
-  mutate(county="Cumberland")
-
-Knox<- dataCounties %>% 
-  group_by(Town) %>% 
-  filter(grepl("Cushing|Friendship|North Haven|South Thomaston", Town)) %>% 
-  mutate(county="Knox")
-
-Sagadahoc<- dataCounties %>% 
-  group_by(Town) %>% 
-  filter(grepl("Georgetown|Phippsburg|West Bath", Town)) %>% 
-  mutate(county="Sagadahoc")
-
-dataCounties<-bind_rows(York, Hancock, Washington, Lincoln, Cumberland, Knox, Sagadahoc)
- 
-scatterCounty<-ggplot(dataCounties, aes(x=Acreage, y=diffScore, color=county, fill=county))+ geom_point()+theme_classic()
-
-ggplot(data = dataCounties) +
-  geom_point(aes(x=Acreage, y=diffScore, color=county)) +
-  theme_bw() +
-  geom_smooth(aes(x=Acreage, y=diffScore, color=county), se=FALSE,
-              method = "lm")
-
-mod_lmCounty = gam(diffScore ~ s(Acreage, pageLen) + Waterbody + county, data = dataCounties)
-summary(mod_lmCounty)
-gam.check(mod_lmCounty)
+citation("mgcv")
