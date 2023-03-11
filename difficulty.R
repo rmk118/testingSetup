@@ -9,6 +9,7 @@ library(patchwork)
 library(ggpubr)
 library(ggpmisc)
 library(itsadug)
+library(mgcv)
 
 #Input data
 data<-read.csv("difficulty.csv")
@@ -42,7 +43,11 @@ data<- data %>%
 Pounds <- data %>% filter(pound == "Yes")
 noPound <- data %>% filter(pound == "No")
 noOutlier<- data %>% filter(Acreage < 60)
+
+
 noCV<- noOutlier %>% filter(pageLen < 80)
+noCV2<- noOutlier %>% 
+  mutate(pageLen=replace(pageLen, Site.ID=="EAST TB", 57))
 
 mean(Pounds$diffScore) #0.4
 sd(Pounds$diffScore) #0.55
@@ -143,7 +148,7 @@ eqn <- sprintf(
 )
 #* ',' ~~ italic(r)^2 ~ '=' ~ %.2g
 
-model.r2 = rfit(diffScore ~ Acreage, data = noOutlier)
+model.r2 = rfit(diffScore ~ Acreage, data = noCV)
 summary(model.r2)
 modelSum2<-summary(model.r2)
 
@@ -207,21 +212,30 @@ scatterSmaller<-ggplot(dataSmaller, aes(x=Acreage, y=diffScore))+ geom_point()+t
 
 
 
-library(mgcv)
 
-mod_lm = gam(diffScore ~ s(Acreage, bs = "cr"), data = data)
+
+mod_lm = gam(diffScore ~ s(Acreage), data = data)
 summary(mod_lm)
 plot(mod_lm)
 
-
-mod_lm2 = gam(diffScore ~ s(Acreage, bs = "cr"), data = noOutlier)
+mod_lm2 = gam(diffScore ~ s(Acreage), data = noCV)
 summary(mod_lm2)
 plot(mod_lm2)
 
 
-mod_lm3 = gam(diffScore ~ s(Acreage), data = noOutlier)
+mod_lm3 = gam(diffScore ~ s(Acreage), data = noCV)
 summary(mod_lm3)
 plot(mod_lm3)
+
+mod_lm4 = gam(diffScore ~ s(Acreage, pageLen), data = noCV)
+summary(mod_lm4)
+
+mod_lm5 = gam(diffScore ~ s(Acreage) + s(pageLen) + Waterbody, data = noCV)
+summary(mod_lm5)
+
+
+mod_lm5 = gam(diffScore ~ s(Acreage) + s(pageLen), data = noCV2)
+summary(mod_lm5)
 
 
 ggplot(noCV, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam")
@@ -248,32 +262,25 @@ scatterNoOutlierColored<-ggplot(noOutlier, aes(x=Acreage, y=diffScore, color=lea
   )
 scatterNoOutlierColored+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
 
-mod_lm4 = gam(diffScore ~ s(Acreage) + Waterbody, data = noOutlier)
-summary(mod_lm4)
-plot(mod_lm4, all.terms = TRUE, pages=1)
-gam.check(mod_lm4)
 
-mod_lm5 = gam(diffScore ~ s(Acreage, pageLen), data = noOutlier)
-summary(mod_lm5)
-gam.check(mod_lm5)
 
-mod_lm6 = gam(diffScore ~ s(Acreage, pageLen) + Waterbody, data = noOutlier)
+
+
+# Including waterbody -----------------------------------------------------
+
+
+mod_1 = gam(diffScore ~ s(Acreage, pageLen) + Waterbody, data = noOutlier)
 summary(mod_lm6) #R-sq.(adj) =  0.658   Deviance explained = 79.9%
-concurvity(mod_lm6)
-gam.check(mod_lm6)
+concurvity(mod_1)
+gam.check(mod_1)
 
-mod_lm8 = gam(diffScore ~ s(Acreage) + s(pageLen), data = noCV)
+mod_2 = gam(diffScore ~ s(Acreage) + s(pageLen) + Waterbody, data = noCV)
+summary(mod_2)
+gam.check(mod_2)
+gamtabs(mod_2, type="HTML")
+plot(mod_2, pages=1)
 
-summary(mod_lm8)
-
-gam.check(mod_lm8)
-
-
-mod_lm7 = gam(diffScore ~ s(Acreage) + s(pageLen) + Waterbody, data = noCV)
-summary(mod_lm7)
-gam.check(mod_lm7)
-gamtabs(mod_lm7, type="HTML")
-
-plot(mod_lm7, pages=1)
-
-citation("mgcv")
+mod_3 = gam(diffScore ~ s(Acreage) + Waterbody, data = noOutlier)
+summary(mod_3)
+plot(mod_3, all.terms = TRUE, pages=1)
+gam.check(mod_3)

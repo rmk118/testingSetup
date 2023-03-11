@@ -38,7 +38,6 @@ data<- data %>%
     pound = as.factor(pound),
     Waterbody = as.factor(Waterbody))
 
-noOutlier<- data %>% filter(Acreage < 60)
 
 
 
@@ -54,7 +53,7 @@ Cumberland<-c("Brunswick", "Chebeague I. and Long I.", "Chebeague Island","Cumbe
 Knox<-c("Cushing", "Friendship", "North Haven", "South Thomaston")
 Sagadahoc<-c("Georgetown", "Phippsburg", "West Bath")
 
-dataCounties<- noOutlier %>% 
+dataCounties<- data %>% 
   mutate(county=NA)
 
 York<- dataCounties %>% 
@@ -94,6 +93,13 @@ Sagadahoc<- dataCounties %>%
 
 dataCounties<-bind_rows(York, Hancock, Washington, Lincoln, Cumberland, Knox, Sagadahoc)
 
+noOutlier<- dataCounties %>% filter(Acreage < 60)
+
+noCV<- noOutlier %>% filter(pageLen < 80)
+
+noCV2<- noOutlier %>% 
+  mutate(pageLen=replace(pageLen, Site.ID=="EAST TB", 57))
+
 scatterCounty<-ggplot(dataCounties, aes(x=Acreage, y=diffScore, color=county, fill=county))+ geom_point()+theme_classic()
 
 ggplot(data = dataCounties) +
@@ -104,4 +110,27 @@ ggplot(data = dataCounties) +
 
 mod_lmCounty = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = dataCounties)
 summary(mod_lmCounty)
-gam.check(mod_lmCounty)
+
+
+mod_lmCounty3 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noOutlier)
+summary(mod_lmCounty3)
+
+mod_lmCounty3 = gam(diffScore ~ s(Acreage,pageLen) + county, data = noCV)
+summary(mod_lmCounty3)
+
+mod_lmCounty2 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = dataCounties, method="REML")
+summary(mod_lmCounty2)
+
+
+
+mod_lmCounty4 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noOutlier, method="REML")
+summary(mod_lmCounty4)
+
+
+mod_lmCounty5 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noCV2)
+summary(mod_lmCounty5)
+
+gam.check(mod_lmCounty3)
+concurvity(mod_lmCounty3)
+
+plot(mod_lmCounty5, all.terms = TRUE, pages=1)
