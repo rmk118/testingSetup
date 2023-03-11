@@ -41,7 +41,7 @@ data<- data %>%
 
 
 
-# County analysis - not significant ---------------------------------------------------------
+# County setup ---------------------------------------------------------
 
 data$Town<-as.factor(data$Town)
 
@@ -94,18 +94,14 @@ Sagadahoc<- dataCounties %>%
 dataCounties<-bind_rows(York, Hancock, Washington, Lincoln, Cumberland, Knox, Sagadahoc)
 
 noOutlier<- dataCounties %>% filter(Acreage < 60)
-
-
-
 noCV<- noOutlier %>% filter(pageLen < 80)
-
 
 noCV<- noCV %>% 
   mutate(
     county = as.factor(county))
-
-noCV2<- noCV %>% 
-  mutate(pageLen=replace(pageLen, Site.ID=="EAST TB", 57))
+# 
+# noCV2<- noCV %>% 
+#   mutate(pageLen=replace(pageLen, Site.ID=="EAST TB", 57))
 
 scatterCounty<-ggplot(dataCounties, aes(x=Acreage, y=diffScore, color=county, fill=county))+ geom_point()+theme_classic()
 
@@ -115,35 +111,57 @@ ggplot(data = dataCounties) +
   geom_smooth(aes(x=Acreage, y=diffScore, color=county), se=FALSE,
               method = "lm")
 
-mod_lmCounty = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = dataCounties)
+
+# All data - acreage only ----------------------------------------------------------------
+
+mod_lmCounty = gam(diffScore ~ s(Acreage) + county, data = noOutlier)
 summary(mod_lmCounty)
 
-mod_lmCounty2 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noOutlier)
+mod_lmCounty2 = gam(diffScore ~ s(Acreage), data = noOutlier)
 summary(mod_lmCounty2)
+# 
+# model.r = rfit(diffScore ~ Acreage, data = noOutlier)
+# modelSum<-summary(model.r)
 
-mod_lmCounty3 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noCV)
-summary(mod_lmCounty3)
+lm = lm(diffScore ~ Acreage, data = noOutlier)
+model_lmSum<-summary(lm)
 
-mod_lmCounty4 = gam(diffScore ~ s(Acreage) + s(pageLen), data = noCV)
-summary(mod_lmCounty4)
+AIC(mod_lmCounty, mod_lmCounty2, lm)
 
-mod_lmCounty5 = gam(diffScore ~ s(Acreage,pageLen) + county, data = noCV)
-summary(mod_lmCounty5)
-
-mod_lmCounty6 = gam(diffScore ~ s(pageLen), data = noCV)
-summary(mod_lmCounty6)
-
-mod_lmCounty7 = gam(diffScore ~ s(Acreage), data = noOutlier)
-summary(mod_lmCounty7)
+ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+
+geom_smooth(method = "lm")+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
 
 
-AIC(mod_lmCounty, mod_lmCounty2, mod_lmCounty3, mod_lmCounty4, mod_lmCounty5, mod_lmCounty6,  mod_lmCounty7,  mod_lmCounty8)
 
-mod_1 = gam(diffScore ~ s(Acreage) + s(pageLen) + Waterbody, data = noCV)
-AIC(mod_lmCounty4, mod_1)
+# No changes - plus pageLen -----------------------------------------------
+
+noChange <- noCV %>% 
+  filter(appType == "Standard aquaculture lease application" | appType == "Experimental aquaculture lease application")
+  
+mod_Change1 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noChange)
+summary(mod_Change1)
+
+mod_Change2 = gam(diffScore ~ s(Acreage) + s(pageLen), data = noChange)
+summary(mod_Change2)
+
+mod_Change3.1 = gam(diffScore ~ s(Acreage,pageLen) + county, data = noChange)
+summary(mod_Change3.1)
+
+mod_Change3 = gam(diffScore ~ s(Acreage,pageLen), data = noChange)
+summary(mod_Change3)
+
+mod_Change4 = gam(diffScore ~ s(pageLen), data = noChange)
+summary(mod_Change4)
+
+AIC(mod_Change1, mod_Change2, mod_Change3, mod_Change3.1, mod_Change4)
+
+# noChange2 <- noCV %>% 
+#   filter(appType == "Standard aquaculture lease application" | appType == "Experimental aquaculture lease application"| appType == "Aquaculture lease renewal application")
 
 
-gam.check(mod_lmCounty3)
-concurvity(mod_lmCounty3)
+gam.check(mod_Change2)
+concurvity(mod_Change2)
 
-plot(mod_lmCounty5, all.terms = TRUE, pages=1)
+plot(mod_Change2, all.terms = TRUE, pages=1)
+
+
