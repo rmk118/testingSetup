@@ -118,24 +118,29 @@ ggplot(data = dataCounties) +
 mod_lmCounty = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = dataCounties)
 summary(mod_lmCounty)
 
-mod_lmCounty2 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = dataCounties, method="REML")
+mod_lmCounty2 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noOutlier)
 summary(mod_lmCounty2)
 
-mod_lmCounty3 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noOutlier)
+mod_lmCounty3 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noCV)
 summary(mod_lmCounty3)
 
-mod_lmCounty4 = gam(diffScore ~ s(Acreage,pageLen) + county, data = noCV)
+mod_lmCounty4 = gam(diffScore ~ s(Acreage) + s(pageLen), data = noCV)
 summary(mod_lmCounty4)
 
-
-
-
-mod_lmCounty5 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noOutlier, method="REML")
+mod_lmCounty5 = gam(diffScore ~ s(Acreage,pageLen) + county, data = noCV)
 summary(mod_lmCounty5)
 
-    
-mod_lmCounty6 = gam(diffScore ~ s(Acreage) + s(pageLen), data = noCV2, method="REML")
+mod_lmCounty6 = gam(diffScore ~ s(pageLen), data = noCV)
 summary(mod_lmCounty6)
+
+mod_lmCounty7 = gam(diffScore ~ s(Acreage), data = noOutlier)
+summary(mod_lmCounty7)
+
+
+AIC(mod_lmCounty, mod_lmCounty2, mod_lmCounty3, mod_lmCounty4, mod_lmCounty5, mod_lmCounty6,  mod_lmCounty7,  mod_lmCounty8)
+
+mod_1 = gam(diffScore ~ s(Acreage) + s(pageLen) + Waterbody, data = noCV)
+AIC(mod_lmCounty4, mod_1)
 
 
 gam.check(mod_lmCounty3)
