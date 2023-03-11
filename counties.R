@@ -95,9 +95,16 @@ dataCounties<-bind_rows(York, Hancock, Washington, Lincoln, Cumberland, Knox, Sa
 
 noOutlier<- dataCounties %>% filter(Acreage < 60)
 
+
+
 noCV<- noOutlier %>% filter(pageLen < 80)
 
-noCV2<- noOutlier %>% 
+
+noCV<- noCV %>% 
+  mutate(
+    county = as.factor(county))
+
+noCV2<- noCV %>% 
   mutate(pageLen=replace(pageLen, Site.ID=="EAST TB", 57))
 
 scatterCounty<-ggplot(dataCounties, aes(x=Acreage, y=diffScore, color=county, fill=county))+ geom_point()+theme_classic()
@@ -111,24 +118,25 @@ ggplot(data = dataCounties) +
 mod_lmCounty = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = dataCounties)
 summary(mod_lmCounty)
 
+mod_lmCounty2 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = dataCounties, method="REML")
+summary(mod_lmCounty2)
 
 mod_lmCounty3 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noOutlier)
 summary(mod_lmCounty3)
 
-mod_lmCounty3 = gam(diffScore ~ s(Acreage,pageLen) + county, data = noCV)
-summary(mod_lmCounty3)
-
-mod_lmCounty2 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = dataCounties, method="REML")
-summary(mod_lmCounty2)
-
-
-
-mod_lmCounty4 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noOutlier, method="REML")
+mod_lmCounty4 = gam(diffScore ~ s(Acreage,pageLen) + county, data = noCV)
 summary(mod_lmCounty4)
 
 
-mod_lmCounty5 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noCV2)
+
+
+mod_lmCounty5 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noOutlier, method="REML")
 summary(mod_lmCounty5)
+
+    
+mod_lmCounty6 = gam(diffScore ~ s(Acreage) + s(pageLen), data = noCV2, method="REML")
+summary(mod_lmCounty6)
+
 
 gam.check(mod_lmCounty3)
 concurvity(mod_lmCounty3)

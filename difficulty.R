@@ -206,6 +206,16 @@ model.r4 = rfit(diffScore ~ Acreage, data = dataSmaller)
 summary(model.r4)
 modelSum2<-summary(model.r4)
 
+
+model.r5 = rfit(diffScore ~ Acreage*pageLen, data = noCV2)
+summary(model.r5)
+
+
+model.r6 = rfit(diffScore ~ Acreage + pageLen, data = noCV2)
+summary(model.r6)
+
+
+
 scatterSmaller<-ggplot(dataSmaller, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r4$coefficients[1], slope=model.r4$coefficients[2])
 
 
@@ -234,8 +244,9 @@ mod_lm5 = gam(diffScore ~ s(Acreage) + s(pageLen) + Waterbody, data = noCV)
 summary(mod_lm5)
 
 
-mod_lm5 = gam(diffScore ~ s(Acreage) + s(pageLen), data = noCV2)
+mod_lm5 = gam(diffScore ~ s(Acreage), data = noCV)
 summary(mod_lm5)
+plot(mod_lm5, pages = 1)
 
 
 ggplot(noCV, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam")
