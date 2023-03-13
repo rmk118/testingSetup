@@ -124,63 +124,62 @@ model_lmSize<-summary(lmSize)
 
 AIC(sizeCounty1, size1, lmSize) #size1 and lmSize have the same AIC, lower than when county included
 
-
 # GAMs that incorporate application length -----------------------------------------------
 
 # noChange excludes lease transfers, renewals, expansions, and changes in gear and/or species authorization. This is a subset of 48 leases from the whole sample of 101 - explanation in updated methods/results doc
 noChange <- noCV %>% 
   filter(appType == "Standard aquaculture lease application" | appType == "Experimental aquaculture lease application")
-
-
+#top row in table 5 - full model
 len1 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noChange)
 summary(len1)
+gam.check(len1)
+concurvity(len1)
+plot(len1, all.terms = TRUE, pages=1)
 
-len2 = gam(diffScore ~ s(Acreage) + s(pageLen), data = noChange)
+#second row in table 5 - interaction plus county
+len2 = gam(diffScore ~ s(Acreage,pageLen) + county, data = noChange)
 summary(len2)
 
-mod_Change3.1 = gam(diffScore ~ s(Acreage,pageLen) + county, data = noChange)
-summary(mod_Change3.1)
+#third row in table 5 - interaction, no county
+len3 = gam(diffScore ~ s(Acreage,pageLen), data = noChange)
+summary(len3)
 
-mod_Change3 = gam(diffScore ~ s(Acreage,pageLen), data = noChange)
-summary(mod_Change3)
+#fourth row in table 5 - additive only, no county (best fit)
+len4 = gam(diffScore ~ s(Acreage) + s(pageLen), data = noChange)
+summary(len4)
+gam.check(len4)
+concurvity(len4)
+plot(len4, all.terms = TRUE, pages=1)
 
-size3 = gam(diffScore ~ s(Acreage, pageLen), data = noCV)
-summary(size3)
+#last row in table 5 - app length only
+len5 = gam(diffScore ~ s(pageLen), data = noChange)
+summary(len5)
 
-mod_Change4 = gam(diffScore ~ s(pageLen), data = noChange)
-summary(mod_Change4)
-
-mod_lm4 = gam(diffScore ~ s(Acreage) + s(pageLen) + Waterbody, data = noCV)
-summary(mod_lm4)
-
-AIC(mod_Change1, mod_Change2, mod_Change3, mod_Change3.1, mod_Change4)
-
-
-gam.check(mod_Change2)
-concurvity(mod_Change2)
-
-plot(mod_Change2, all.terms = TRUE, pages=1)
+AIC(len1, len2, len3, len4, len5) #len4 has lowest AIC
 
 # noChange2 <- noCV %>% 
 #   filter(appType == "Standard aquaculture lease application" | appType == "Experimental aquaculture lease application"| appType == "Aquaculture lease renewal application")
 
-# Including waterbody -----------------------------------------------------
-mod_1 = gam(diffScore ~ s(Acreage, pageLen) + Waterbody, data = noOutlier)
-summary(mod_lm6) #R-sq.(adj) =  0.658   Deviance explained = 79.9%
-concurvity(mod_1)
-gam.check(mod_1)
+# # Including waterbody -----------------------------------------------------
+# even if these technically work, I think too many waterbodies to make this good stats
 
-mod_2 = gam(diffScore ~ s(Acreage) + s(pageLen) + Waterbody, data = noCV)
-summary(mod_2)
-gam.check(mod_2)
-gamtabs(mod_2, type="HTML")
-plot(mod_2, pages=1)
-
-mod_3 = gam(diffScore ~ s(Acreage) + Waterbody, data = noOutlier)
-summary(mod_3)
-plot(mod_3, all.terms = TRUE, pages=1)
-gam.check(mod_3)
-
+# mod_1 = gam(diffScore ~ s(Acreage, pageLen) + Waterbody, data = noOutlier)
+# summary(mod_1) #R-sq.(adj) =  0.658   Deviance explained = 79.9%
+# concurvity(mod_1)
+# gam.check(mod_1)
+# 
+# mod_2 = gam(diffScore ~ s(Acreage) + s(pageLen) + Waterbody, data = noOutlier)
+# summary(mod_2)
+# gam.check(mod_2)
+# gamtabs(mod_2, type="HTML")
+# plot(mod_2, pages=1)
+# 
+# mod_3 = gam(diffScore ~ s(Acreage) + Waterbody, data = noOutlier)
+# summary(mod_3)
+# plot(mod_3, all.terms = TRUE, pages=1)
+# gam.check(mod_3)
+# 
+# AIC(mod_1, mod_2, mod_3)
 
 # Scatterplots -----------------------------------------------------
 
