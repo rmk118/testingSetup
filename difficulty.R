@@ -1,5 +1,5 @@
 #Difficulty Scoring Analysis
-#RK 3/10/23
+#RK 3/13/23
 
 library(tidyverse)
 library(rstatix)
@@ -46,8 +46,8 @@ noOutlier<- data %>% filter(Acreage < 60)
 
 
 noCV<- noOutlier %>% filter(pageLen < 80)
-noCV2<- noOutlier %>% 
-  mutate(pageLen=replace(pageLen, Site.ID=="EAST TB", 57))
+# noCV2<- noOutlier %>% 
+#   mutate(pageLen=replace(pageLen, Site.ID=="EAST TB", 57))
 
 mean(Pounds$diffScore) #0.4
 sd(Pounds$diffScore) #0.55
@@ -97,8 +97,18 @@ wilcox.test(data=dataSmall, diffScore ~ pound, alternative = "greater")
 dataSmaller <- data %>% filter(Acreage <=4.15)
 wilcox.test(data=dataSmaller, diffScore ~ pound, alternative = "greater")
 
+wilcox.test(data=data, diffScore ~ leaseType)
 
-# Graphs ------------------------------------------------------------------
+data %>% group_by(leaseType) %>%
+  get_summary_stats(numConditions, type="common")
+
+data %>% group_by(appType) %>%
+  get_summary_stats(numConditions, type="common")
+noExp <- data %>% filter(appType != "Aquaculture lease expansion")
+kruskal.test(data=noExp, diffScore ~ appType)
+
+
+# Dotplots and histograms ------------------------------------------------------------------
 
 ggplot(data, aes(x=diffScore))+geom_histogram(binwidth = 1)+theme_classic()
 #basic acreage histogram
@@ -130,36 +140,53 @@ smallerPlot
 #Acreage histogram no Outlier
 noOutlierAcreage<-ggplot(noOutlier, aes(x=Acreage, fill=pound))+geom_histogram(binwidth = 1, alpha = 0.5, position = "identity")+theme_classic()+labs(x="Acreage", y="Number of leases")+guides(fill=guide_legend("Pound?"), color="none")+scale_x_continuous(breaks=seq(0,90,10))+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=12))
 
+#Histogram figure in manuscript (original results section Fig. 2)
 allPlot + smallPlot + smallerPlot +plot_layout(ncol=3,guides = 'collect')+ plot_annotation(tag_levels = 'A') & theme(legend.position = "right", text = element_text(size=14))
 
 
-
-
-# Scatterplots/regressions ------------------------------------------------
+# Robust linear regression ------------------------------------------------
 model.r = rfit(diffScore ~ Acreage, data = data)
 modelSum<-summary(model.r)
-
-eqn <- sprintf(
-  "italic(y) == %.3g + %.2g * italic(x)  * ',' ~~ italic(p) ~ '=' ~ %.3g",
-  coef(model.r)[1],
-  coef(model.r)[2],
- # summary(model.r)$R2,
-  modelSum$coefficients[2,4]
-)
-#* ',' ~~ italic(r)^2 ~ '=' ~ %.2g
 
 model.r2 = rfit(diffScore ~ Acreage, data = noCV)
 summary(model.r2)
 modelSum2<-summary(model.r2)
 
+model.r3 = rfit(diffScore ~ Acreage, data = noOutlier)
+summary(model.r3)
+modelSum3<-summary(model.r3)
+
+
+#Only leases <17.3
+model.r3 = rfit(diffScore ~ Acreage, data = dataSmall)
+summary(model.r3)
+modelSum2<-summary(model.r3)
+
+#Only leases <4.16
+model.r4 = rfit(diffScore ~ Acreage, data = dataSmaller)
+summary(model.r4)
+modelSum2<-summary(model.r4)
+
+model.r5 = rfit(diffScore ~ Acreage*pageLen, data = noCV)
+summary(model.r5)
+
+model.r6 = rfit(diffScore ~ Acreage + pageLen, data = noCV)
+summary(model.r6)
+
+# Scatterplots ------------------------------------------------
+eqn <- sprintf(
+  "italic(y) == %.3g + %.2g * italic(x)  * ',' ~~ italic(p) ~ '=' ~ %.3g",
+  coef(model.r)[1],
+  coef(model.r)[2],
+  modelSum$coefficients[2,4]
+)
+
 eqn2 <- sprintf(
   "italic(y) == %.3g + %.2g * italic(x) * ',' ~~ italic(p) ~ '=' ~ %.3g",
   coef(model.r2)[1],
   coef(model.r2)[2],
-  #summary(model.r2)$R2,
   modelSum2$coefficients[2,4]
 )
-
 
 
 scatterAll<-ggplot(data, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
@@ -180,7 +207,7 @@ scatterNoOutlier<-ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+t
   )
 scatterNoOutlier
 
-#FIGURE 1
+#FIGURE 1 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 scatterNoOutlier<-ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
   annotate(
     "text",
@@ -188,82 +215,16 @@ scatterNoOutlier<-ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+t
     label = eqn2, parse = TRUE
   )
 scatterNoOutlier+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
+#Comparing with and without the 89 acre lease
 scatterAll + scatterNoOutlier + plot_annotation(tag_levels = 'A') & theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
 
 
 # + stat_regline_equation(label.y = 10, aes(label = ..eq.label..))+
 #                          stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "*`,`~")))
 
-model.r3 = rfit(diffScore ~ Acreage, data = dataSmall)
-summary(model.r3)
-modelSum2<-summary(model.r3)
-
 scatterSmall<-ggplot(dataSmall, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r3$coefficients[1], slope=model.r3$coefficients[2])
-
-model.r4 = rfit(diffScore ~ Acreage, data = dataSmaller)
-summary(model.r4)
-modelSum2<-summary(model.r4)
-
-
-model.r5 = rfit(diffScore ~ Acreage*pageLen, data = noCV2)
-summary(model.r5)
-
-
-model.r6 = rfit(diffScore ~ Acreage + pageLen, data = noCV2)
-summary(model.r6)
-
-
-
-scatterSmaller<-ggplot(dataSmaller, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r4$coefficients[1], slope=model.r4$coefficients[2])
-
-
-
-
-
-
-
-mod_lm = gam(diffScore ~ s(Acreage), data = data)
-summary(mod_lm)
-plot(mod_lm)
-
-mod_lm2 = gam(diffScore ~ s(Acreage), data = noCV)
-summary(mod_lm2)
-plot(mod_lm2)
-
-
-mod_lm3 = gam(diffScore ~ s(Acreage), data = noCV)
-summary(mod_lm3)
-plot(mod_lm3)
-
-mod_lm4 = gam(diffScore ~ s(Acreage, pageLen), data = noCV)
-summary(mod_lm4)
-
-mod_lm5 = gam(diffScore ~ s(Acreage) + s(pageLen) + Waterbody, data = noCV)
-summary(mod_lm5)
-
-
-mod_lm5 = gam(diffScore ~ s(Acreage), data = noCV)
-summary(mod_lm5)
-plot(mod_lm5, pages = 1)
-
-
-ggplot(noCV, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam")
-
-ggplot(noCV, aes(x=pageLen, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam")
-
-wilcox.test(data=data, diffScore ~ leaseType)
-
-data %>% group_by(leaseType) %>%
-  get_summary_stats(numConditions, type="common")
-
-data %>% group_by(appType) %>%
-  get_summary_stats(numConditions, type="common")
-noExp <- data %>% filter(appType != "Aquaculture lease expansion")
-kruskal.test(data=noExp, diffScore ~ appType)
-
-
 
 scatterNoOutlierColored<-ggplot(noOutlier, aes(x=Acreage, y=diffScore, color=leaseType))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
   annotate(
@@ -275,23 +236,3 @@ scatterNoOutlierColored+theme(axis.title.y = element_text(margin = margin(r = 12
 
 
 
-
-
-# Including waterbody -----------------------------------------------------
-
-
-mod_1 = gam(diffScore ~ s(Acreage, pageLen) + Waterbody, data = noOutlier)
-summary(mod_lm6) #R-sq.(adj) =  0.658   Deviance explained = 79.9%
-concurvity(mod_1)
-gam.check(mod_1)
-
-mod_2 = gam(diffScore ~ s(Acreage) + s(pageLen) + Waterbody, data = noCV)
-summary(mod_2)
-gam.check(mod_2)
-gamtabs(mod_2, type="HTML")
-plot(mod_2, pages=1)
-
-mod_3 = gam(diffScore ~ s(Acreage) + Waterbody, data = noOutlier)
-summary(mod_3)
-plot(mod_3, all.terms = TRUE, pages=1)
-gam.check(mod_3)
