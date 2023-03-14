@@ -9,6 +9,7 @@ library(patchwork)
 library(ggpubr)
 library(ggpmisc)
 library(mgcv)
+library(visreg)
 
 #Input data
 data<-read.csv("difficulty.csv")
@@ -110,14 +111,35 @@ ggplot(data = dataCounties) +
 
 # All data GAMs - Acreage only ----------------------------------------------------------------
 
+hist(noOutlier$diffScore, breaks = 15)
+
+
 sizeCounty1 = gam(diffScore ~ s(Acreage) + county, data = noOutlier)
 summary(sizeCounty1)
 gam.check(sizeCounty1)
 
-size1 = gam(diffScore ~ s(Acreage), data = noOutlier)
+size1 = gam(diffScore ~ s(Acreage), data = noOutlier, family = "tw(theta = NULL, link = 'log', a = 1.01, b = 1.99)")
 summary(size1)
 gam.check(size1)
 plot(size1)
+visreg(size1, scale="response")
+
+MR_Temp = visreg(size1, "Acreage",
+                 scale = "response",
+                 partial = FALSE,
+                 rug = FALSE,
+                 line = list(col = "black"),
+                 fill = list(fill ="lightblue"), gg=TRUE)+
+  #scale_y_continuous(limits = c(-5.5, -0.5))+
+  #scale_x_continuous(limits = c(0,18), breaks = c(0, 4, 8, 12, 16))+
+  labs(x = "Acreage", y = "Effect on difficulty score")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_blank(),
+        panel.border = element_rect(linetype = "solid", fill = NA),
+        text = element_text(size=10, color = "black"),
+        axis.text = element_text(size = 10, color = "black"))
 
 lmSize = lm(diffScore ~ Acreage, data = noOutlier)
 model_lmSize<-summary(lmSize)
@@ -126,36 +148,36 @@ AIC(sizeCounty1, size1, lmSize) #size1 and lmSize have the same AIC, lower than 
 
 # GAMs that incorporate application length -----------------------------------------------
 
-# noChange excludes lease transfers, renewals, expansions, and changes in gear and/or species authorization. This is a subset of 48 leases from the whole sample of 101 - explanation in updated methods/results doc
-noChange <- noCV %>% 
-  filter(appType == "Standard aquaculture lease application" | appType == "Experimental aquaculture lease application")
-#top row in table 5 - full model
-len1 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noChange)
-summary(len1)
-gam.check(len1)
-concurvity(len1)
-plot(len1, all.terms = TRUE, pages=1)
-
-#second row in table 5 - interaction plus county
-len2 = gam(diffScore ~ s(Acreage,pageLen) + county, data = noChange)
-summary(len2)
-
-#third row in table 5 - interaction, no county
-len3 = gam(diffScore ~ s(Acreage,pageLen), data = noChange)
-summary(len3)
-
-#fourth row in table 5 - additive only, no county (best fit)
-len4 = gam(diffScore ~ s(Acreage) + s(pageLen), data = noChange)
-summary(len4)
-gam.check(len4)
-concurvity(len4)
-plot(len4, all.terms = TRUE, pages=1)
-
-#last row in table 5 - app length only
-len5 = gam(diffScore ~ s(pageLen), data = noChange)
-summary(len5)
-
-AIC(len1, len2, len3, len4, len5) #len4 has lowest AIC
+# # noChange excludes lease transfers, renewals, expansions, and changes in gear and/or species authorization. This is a subset of 48 leases from the whole sample of 101 - explanation in updated methods/results doc
+# noChange <- noCV %>% 
+#   filter(appType == "Standard aquaculture lease application" | appType == "Experimental aquaculture lease application")
+# #top row in table 5 - full model
+# len1 = gam(diffScore ~ s(Acreage) + s(pageLen) + county, data = noChange)
+# summary(len1)
+# gam.check(len1)
+# concurvity(len1)
+# plot(len1, all.terms = TRUE, pages=1)
+# 
+# #second row in table 5 - interaction plus county
+# len2 = gam(diffScore ~ s(Acreage,pageLen) + county, data = noChange)
+# summary(len2)
+# 
+# #third row in table 5 - interaction, no county
+# len3 = gam(diffScore ~ s(Acreage,pageLen), data = noChange)
+# summary(len3)
+# 
+# #fourth row in table 5 - additive only, no county (best fit)
+# len4 = gam(diffScore ~ s(Acreage) + s(pageLen), data = noChange)
+# summary(len4)
+# gam.check(len4)
+# concurvity(len4)
+# plot(len4, all.terms = TRUE, pages=1)
+# 
+# #last row in table 5 - app length only
+# len5 = gam(diffScore ~ s(pageLen), data = noChange)
+# summary(len5)
+# 
+# AIC(len1, len2, len3, len4, len5) #len4 has lowest AIC
 
 # noChange2 <- noCV %>% 
 #   filter(appType == "Standard aquaculture lease application" | appType == "Experimental aquaculture lease application"| appType == "Aquaculture lease renewal application")
