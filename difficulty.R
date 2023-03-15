@@ -198,6 +198,8 @@ scatterAll<-ggplot(data, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classi
   )
 scatterAll
 
+ggplot(data, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")
+
 scatterNoOutlier<-ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
   annotate(
     "text",

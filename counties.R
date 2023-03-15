@@ -225,7 +225,8 @@ with(glm1, cbind(res.deviance = deviance, df = df.residual,
                p = pchisq(deviance, df.residual, lower.tail=FALSE)))
 
 
-
+ggplot(dataCounties, aes(x=county, y=diffScore)) + 
+  geom_boxplot()
 # GAMs that incorporate application length -----------------------------------------------
 
 # # noChange excludes lease transfers, renewals, expansions, and changes in gear and/or species authorization. This is a subset of 48 leases from the whole sample of 101 - explanation in updated methods/results doc
