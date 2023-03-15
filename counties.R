@@ -113,7 +113,6 @@ ggplot(data = dataCounties) +
 
 hist(noOutlier$diffScore, breaks = 15)
 
-
 sizeCounty1 = gam(diffScore ~ s(Acreage) + county, data = noOutlier)
 summary(sizeCounty1)
 gam.check(sizeCounty1)
@@ -146,6 +145,73 @@ model_lmSize<-summary(lmSize)
 
 AIC(sizeCounty1, size1, lmSize) #size1 and lmSize have the same AIC, lower than when county included
 
+
+onlyOysters<- data %>% 
+  mutate(oysters=TRUE) %>% 
+  mutate(oysters = replace(oysters, Leaseholder == "Moosabec Mussels, Inc.", FALSE)) %>% 
+  mutate(oysters = replace(oysters, Leaseholder == "Cooke Aquaculture USA, Inc.", FALSE)) %>% 
+  mutate(oysters = replace(oysters, Leaseholder == "Wild Ocean Aquaculture, LLC.", FALSE)) %>% 
+  mutate(oysters = replace(oysters, Leaseholder == "Damariscove Seafood LLC.", FALSE)) %>% 
+  mutate(oysters = replace(oysters, Leaseholder == "West, James and Springtide Seaweed, LLC", FALSE))
+  
+onlyOysters<- onlyOysters %>% 
+  filter(oysters==TRUE)
+
+tw1 = gam(diffScore ~ s(Acreage), data = onlyOysters, family = "tw(theta = NULL, link = 'log', a = 1.01, b = 1.99)")
+summary(tw1)
+
+gaussianGAM = gam(diffScore ~ s(Acreage), data = onlyOysters)
+summary(gaussianGAM)
+gam.check(gaussianGAM)
+
+poissonGam = gam(diffScore ~ s(Acreage), data = onlyOysters, family = "poisson")
+summary(poissonGam)
+gam.check(poissonGam )
+
+lmSize2 = lm(diffScore ~ Acreage, data = onlyOysters)
+summary(lmSize2)
+plot(lmSize2)
+hist(lmSize2$residuals)
+
+ggplot(onlyOysters, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam")
+
+ggplot(onlyOysters, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="lm")
+
+ggplot(onlyOysters, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="glm", method.args=list((family="poisson")))
+
+mean(onlyOysters$diffScore)
+var(onlyOysters$diffScore)
+
+
+glm1<-glm(diffScore ~ Acreage, data = onlyOysters, family = "poisson")
+summary(glm1)
+glm1$fitted.values
+rstandard(glm1)
+plot(glm1)
+
+#worse than poisson, quasipoisson was also worse
+# glm2<-glm.nb(diffScore ~ Acreage, data = onlyOysters)
+# summary(glm2)
+
+AER::dispersiontest(glm1)
+
+mu<- predict(glm1, type="response")
+z<-predict(glm1)+ (onlyOysters$diffScore-mu)/mu
+plot(z ~ log(diffScore), onlyOysters, ylab="linearized response")
+
+AIC(lmSize2, glm1, poissonGam, gaussianGAM, tw1)
+
+par(mfrow = c(2,2))
+plot(glm1)
+
+plot(residuals(glm1) ~ predict(glm1, type="response"), xlab=expression(hat(mu)), ylab="deviance residuals")
+plot(residuals(glm1) ~ predict(glm1, type="link"), xlab=expression(hat(eta)), ylab="deviance residuals")
+plot(residuals(glm1, type="response") ~ predict(glm1, type="link"), xlab=expression(hat(eta)), ylab="response residuals")
+
+1 - pchisq(deviance(glm1), df.residual(glm1))
+
+with(glm1, cbind(res.deviance = deviance, df = df.residual,
+               p = pchisq(deviance, df.residual, lower.tail=FALSE)))
 # GAMs that incorporate application length -----------------------------------------------
 
 # # noChange excludes lease transfers, renewals, expansions, and changes in gear and/or species authorization. This is a subset of 48 leases from the whole sample of 101 - explanation in updated methods/results doc
@@ -206,9 +272,22 @@ AIC(sizeCounty1, size1, lmSize) #size1 and lmSize have the same AIC, lower than 
 # Scatterplots -----------------------------------------------------
 
 #Figure 1 in new results section
-ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+
-  geom_smooth(method = "lm")+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
+# ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+
+#   geom_smooth(method = "lm")+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
+# 
+# ggplot(noCV, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam")
+# 
+# ggplot(noCV, aes(x=pageLen, y=diffScore))+ geom_point()+theme_classic()+labs(x="App length (pages)", y="Difficulty score")+geom_smooth(method="gam")
 
-ggplot(noCV, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam")
 
-ggplot(noCV, aes(x=pageLen, y=diffScore))+ geom_point()+theme_classic()+labs(x="App length (pages)", y="Difficulty score")+geom_smooth(method="gam")
+glm1$model$fitted <- predict(glm1, type = "response")
+
+# ggplot2 Plot:
+
+ggplot(glm1$model) + 
+  geom_point(aes(Acreage, diffScore)) +
+  geom_line(aes(Acreage, fitted)) + 
+  labs(x = "\n acreage", y = "diffscore \n") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_text(face="bold", colour="blue", size = 12),
+        axis.title.y = element_text(face="bold", colour="blue", size = 12))
