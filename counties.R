@@ -143,7 +143,7 @@ MR_Temp = visreg(size1, "Acreage",
 lmSize = lm(diffScore ~ Acreage, data = noOutlier)
 model_lmSize<-summary(lmSize)
 
-AIC(sizeCounty1, size1, lmSize) #size1 and lmSize have the same AIC, lower than when county included
+AIC(sizeCounty1, size1, lmSize)
 
 
 onlyOysters<- data %>% 
@@ -159,27 +159,35 @@ onlyOysters<- onlyOysters %>%
 
 hist(onlyOysters$diffScore)
 
-tw1 = gam(diffScore ~ s(Acreage), data = onlyOysters, family = "tw(theta = NULL, link = 'log', a = 1.01, b = 1.99)")
-summary(tw1)
+twGam = gam(diffScore ~ s(Acreage), data = onlyOysters, family = "tw(theta = NULL, link = 'log', a = 1.01, b = 1.99)")
+summary(twGam)
+gam.check(twGam)
 
-gaussianGAM = gam(diffScore ~ s(Acreage), data = onlyOysters)
-summary(gaussianGAM)
-gam.check(gaussianGAM)
+visreg(twGam, scale="response")
+
+gaussianGam = gam(diffScore ~ s(Acreage), data = onlyOysters)
+summary(gaussianGam)
+gam.check(gaussianGam)
+visreg(gaussianGam, scale="response")
 
 poissonGam = gam(diffScore ~ s(Acreage), data = onlyOysters, family = "poisson")
 summary(poissonGam)
-gam.check(poissonGam )
+gam.check(poissonGam)
 
 lmSize2 = lm(diffScore ~ Acreage, data = onlyOysters)
 summary(lmSize2)
 plot(lmSize2)
 hist(lmSize2$residuals)
 
+tweedieGraph<-ggplot(onlyOysters, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam", method.args=list((family = "tw(theta = NULL, link = 'log', a = 1.01, b = 1.99)")))
+
 ggplot(onlyOysters, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam")
 
 ggplot(onlyOysters, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="lm")
 
-ggplot(onlyOysters, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="glm", method.args=list((family="poisson")))
+poissonGraph<-ggplot(onlyOysters, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="glm", method.args=list((family="poisson")))
+
+tweedieGraph + poissonGraph
 
 mean(onlyOysters$diffScore)
 var(onlyOysters$diffScore)
@@ -191,6 +199,7 @@ glm1$fitted.values
 rstandard(glm1)
 plot(glm1)
 
+
 #worse than poisson, quasipoisson was also worse
 # glm2<-glm.nb(diffScore ~ Acreage, data = onlyOysters)
 # summary(glm2)
@@ -201,7 +210,7 @@ mu<- predict(glm1, type="response")
 z<-predict(glm1)+ (onlyOysters$diffScore-mu)/mu
 plot(z ~ log(diffScore), onlyOysters, ylab="linearized response")
 
-AIC(lmSize2, glm1, poissonGam, gaussianGAM, tw1)
+AIC(lmSize2, glm1, poissonGam, gaussianGam, twGam)
 
 par(mfrow = c(2,2))
 plot(glm1)
@@ -214,6 +223,9 @@ plot(residuals(glm1, type="response") ~ predict(glm1, type="link"), xlab=express
 
 with(glm1, cbind(res.deviance = deviance, df = df.residual,
                p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+
+
+
 # GAMs that incorporate application length -----------------------------------------------
 
 # # noChange excludes lease transfers, renewals, expansions, and changes in gear and/or species authorization. This is a subset of 48 leases from the whole sample of 101 - explanation in updated methods/results doc
