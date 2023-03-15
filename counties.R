@@ -157,6 +157,8 @@ onlyOysters<- data %>%
 onlyOysters<- onlyOysters %>% 
   filter(oysters==TRUE)
 
+hist(onlyOysters$diffScore)
+
 tw1 = gam(diffScore ~ s(Acreage), data = onlyOysters, family = "tw(theta = NULL, link = 'log', a = 1.01, b = 1.99)")
 summary(tw1)
 
