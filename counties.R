@@ -1,5 +1,5 @@
 #County Analysis
-#RK 3/13/23
+#RK 3/16/23
 
 library(tidyverse)
 library(rstatix)
@@ -176,10 +176,10 @@ gam.check(poissonGam)
 
 lmSize2 = lm(diffScore ~ Acreage, data = onlyOysters)
 summary(lmSize2)
-plot(lmSize2)
+# plot(lmSize2)
 hist(lmSize2$residuals)
 
-tweedieGraph<-ggplot(onlyOysters, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam", method.args=list((family = "tw(theta = NULL, link = 'log', a = 1.01, b = 1.99)")))
+tweedieGraph<-ggplot(onlyOysters, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam", method.args=list((family = "tw(theta = NULL, link = 'log', a = 1.01, b = 1.99)")))+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
 
 ggplot(onlyOysters, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_smooth(method="gam")
 
