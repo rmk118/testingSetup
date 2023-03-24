@@ -1,5 +1,5 @@
 #Difficulty Scoring Analysis
-#RK 3/13/23
+#RK 3/24/23
 
 library(tidyverse)
 library(rstatix)
@@ -42,11 +42,11 @@ data<- data %>%
 #Subsets of data
 Pounds <- data %>% filter(pound == "Yes")
 noPound <- data %>% filter(pound == "No")
-noOutlier<- data %>% filter(Acreage < 60)
+noMussels<- data %>% filter(Acreage < 60)
 
 
-noCV<- noOutlier %>% filter(pageLen < 80)
-# noCV2<- noOutlier %>% 
+noCV<- noMussels %>% filter(pageLen < 80)
+# noCV2<- noMussels %>% 
 #   mutate(pageLen=replace(pageLen, Site.ID=="EAST TB", 57))
 
 mean(Pounds$diffScore) #0.4
@@ -138,7 +138,7 @@ smallerPlot<-ggplot(dataSmaller, aes(x=diffScore, fill=pound))+geom_histogram(bi
 smallerPlot
 
 #Acreage histogram no Outlier
-noOutlierAcreage<-ggplot(noOutlier, aes(x=Acreage, fill=pound))+geom_histogram(binwidth = 1, alpha = 0.5, position = "identity")+theme_classic()+labs(x="Acreage", y="Number of leases")+guides(fill=guide_legend("Pound?"), color="none")+scale_x_continuous(breaks=seq(0,90,10))+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=12))
+noMusselsAcreage<-ggplot(noMussels, aes(x=Acreage, fill=pound))+geom_histogram(binwidth = 1, alpha = 0.5, position = "identity")+theme_classic()+labs(x="Acreage", y="Number of leases")+guides(fill=guide_legend("Pound?"), color="none")+scale_x_continuous(breaks=seq(0,90,10))+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=12))
 
 #Histogram figure in manuscript (original results section Fig. 2)
 allPlot + smallPlot + smallerPlot +plot_layout(ncol=3,guides = 'collect')+ plot_annotation(tag_levels = 'A') & theme(legend.position = "right", text = element_text(size=14))
@@ -152,7 +152,7 @@ model.r2 = rfit(diffScore ~ Acreage, data = noCV)
 summary(model.r2)
 modelSum2<-summary(model.r2)
 
-model.r3 = rfit(diffScore ~ Acreage, data = noOutlier)
+model.r3 = rfit(diffScore ~ Acreage, data = noMussels)
 summary(model.r3)
 modelSum3<-summary(model.r3)
 
@@ -200,27 +200,27 @@ scatterAll
 
 ggplot(data, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")
 
-scatterNoOutlier<-ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
+scatternoMussels<-ggplot(noMussels, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
   annotate(
     "text",
     x = Inf, y = -Inf,
     label = eqn2, parse = TRUE,
     hjust = 1.1, vjust = -1.1
   )
-scatterNoOutlier
+scatternoMussels
 
 #FIGURE 1 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-scatterNoOutlier<-ggplot(noOutlier, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
+scatternoMussels<-ggplot(noMussels, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
   annotate(
     "text",
     x =15, y = 10,
     label = eqn2, parse = TRUE
   )
-scatterNoOutlier+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
+scatternoMussels+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #Comparing with and without the 89 acre lease
-scatterAll + scatterNoOutlier + plot_annotation(tag_levels = 'A') & theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
+scatterAll + scatternoMussels + plot_annotation(tag_levels = 'A') & theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
 
 
 # + stat_regline_equation(label.y = 10, aes(label = ..eq.label..))+
@@ -228,13 +228,13 @@ scatterAll + scatterNoOutlier + plot_annotation(tag_levels = 'A') & theme(axis.t
 
 scatterSmall<-ggplot(dataSmall, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r3$coefficients[1], slope=model.r3$coefficients[2])
 
-scatterNoOutlierColored<-ggplot(noOutlier, aes(x=Acreage, y=diffScore, color=leaseType))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
+scatternoMusselsColored<-ggplot(noMussels, aes(x=Acreage, y=diffScore, color=leaseType))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
   annotate(
     "text",
     x =15, y = 10,
     label = eqn2, parse = TRUE
   )
-scatterNoOutlierColored+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
+scatternoMusselsColored+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
 
 
 
