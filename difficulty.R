@@ -44,24 +44,47 @@ Pounds <- data %>% filter(pound == "Yes")
 noPound <- data %>% filter(pound == "No")
 noMussels<- data %>% filter(Acreage < 60)
 
+onlyOysters<- data %>% 
+  mutate(oysters=TRUE) %>% 
+  mutate(oysters = replace(oysters, Leaseholder == "Moosabec Mussels, Inc.", FALSE)) %>% 
+  mutate(oysters = replace(oysters, Leaseholder == "Cooke Aquaculture USA, Inc.", FALSE)) %>% 
+  mutate(oysters = replace(oysters, Leaseholder == "Wild Ocean Aquaculture, LLC.", FALSE)) %>% 
+  mutate(oysters = replace(oysters, Leaseholder == "Damariscove Seafood LLC.", FALSE)) %>% 
+  mutate(oysters = replace(oysters, Leaseholder == "West, James and Springtide Seaweed, LLC", FALSE))
+
+onlyOysters<- onlyOysters %>% 
+  filter(oysters==TRUE)
 
 noCV<- noMussels %>% filter(pageLen < 80)
 # noCV2<- noMussels %>% 
 #   mutate(pageLen=replace(pageLen, Site.ID=="EAST TB", 57))
 
-mean(Pounds$diffScore) #0.4
-sd(Pounds$diffScore) #0.55
-mean(noPound$diffScore) #1.98
-sd(noPound$diffScore) #1.84
+Pounds2 <- onlyOysters %>% filter(pound == "Yes")
+noPound2 <- onlyOysters %>% filter(pound == "No")
+
+mean(noPound2$diffScore) #2.02
+sd(noPound2$diffScore) #1.84
 
 opposedUL <- noPound %>% filter(numWitOpp > 0)
 length(opposedUL$numWitOpp)
+
+opposedUL2 <- noPound2 %>% filter(numWitOpp > 0)
+length(opposedUL2$numWitOpp)
+
+for2 <- noPound2 %>% filter(numWitFor > 0)
+length(for2$numWitFor)
+
+comments2 <- noPound2 %>% filter(commentsOpp > 0)
+length(comments2$commentsOpp)
 
 opposed <- data %>% filter(numWitOpp > 0)
 length(opposed$numWitOpp)
 
 area <- noPound %>% filter(areaMod > 0)
 length(area$areaMod)
+
+area2 <- noPound2 %>% filter(areaMod > 0)
+length(area2$areaMod)
 
 #Summary statistics
 data %>% group_by(pound) %>%
@@ -70,13 +93,25 @@ data %>% group_by(pound) %>%
 data %>% group_by(pound) %>%
   get_summary_stats(numConditions, type="common")
 
+onlyOysters %>% group_by(pound) %>%
+  get_summary_stats(numConditions, type="common")
+
 data %>% group_by(pound) %>%
+  get_summary_stats(Acreage, type="common")
+
+onlyOysters %>% group_by(pound) %>%
   get_summary_stats(Acreage, type="common")
 
 data %>% group_by(pound) %>%
   get_summary_stats(numWitFor, type="common")
 
+onlyOysters %>% group_by(pound) %>%
+  get_summary_stats(numWitFor, type="common")
+
 data %>% group_by(pound) %>%
+  get_summary_stats(numWitOpp, type="common")
+
+onlyOysters %>% group_by(pound) %>%
   get_summary_stats(numWitOpp, type="common")
 
 noPound %>% group_by(leaseType) %>%
@@ -86,6 +121,11 @@ stat.test <- data %>%
   wilcox_test(diffScore ~ pound, alternative = "greater") %>%
   add_significance()
 stat.test
+
+stat.test2 <- onlyOysters %>% 
+  wilcox_test(diffScore ~ pound, alternative = "greater") %>%
+  add_significance()
+stat.test2
 
 wilcox.test(Pounds$diffScore, noPound$diffScore, alternative = "less")
 wilcox.test(data=data, diffScore ~ pound, alternative = "greater")
@@ -98,6 +138,7 @@ dataSmaller <- data %>% filter(Acreage <=4.15)
 wilcox.test(data=dataSmaller, diffScore ~ pound, alternative = "greater")
 
 wilcox.test(data=data, diffScore ~ leaseType)
+wilcox.test(data=onlyOysters, diffScore ~ leaseType)
 
 data %>% group_by(leaseType) %>%
   get_summary_stats(numConditions, type="common")
@@ -106,6 +147,9 @@ data %>% group_by(appType) %>%
   get_summary_stats(numConditions, type="common")
 noExp <- data %>% filter(appType != "Aquaculture lease expansion")
 kruskal.test(data=noExp, diffScore ~ appType)
+
+noExp2 <- onlyOysters %>% filter(appType != "Aquaculture lease expansion")
+kruskal.test(data=noExp2, diffScore ~ appType)
 
 
 # Dotplots and histograms ------------------------------------------------------------------

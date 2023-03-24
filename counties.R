@@ -35,13 +35,10 @@ data<- data %>%
     leaseType = as.factor(leaseType),
     appType = as.factor(appType),
     pound = as.factor(pound),
+    Town = as.factor(Town),
     Waterbody = as.factor(Waterbody))
 
-
 # County setup ---------------------------------------------------------
-
-data$Town<-as.factor(data$Town)
-
 York<-c("Eliot", "Wells")
 Hancock<-c("Bar Harbor", "Blue Hill", "Brooksville", "Brooksville and Sedgwick", "Cranberry Isles", "Deer Isle", "Franklin", "Gouldsboro", "Hancock", "Lamoine", "Sorrento", "Swan's Island", "Trenton" )
 Washington<-c("Beals", "Cutler", "Steuben")
@@ -227,6 +224,7 @@ with(glm1, cbind(res.deviance = deviance, df = df.residual,
 
 ggplot(dataCounties, aes(x=county, y=diffScore)) + 
   geom_boxplot()
+
 # GAMs that incorporate application length -----------------------------------------------
 
 # # noChange excludes lease transfers, renewals, expansions, and changes in gear and/or species authorization. This is a subset of 48 leases from the whole sample of 101 - explanation in updated methods/results doc
@@ -294,15 +292,13 @@ ggplot(dataCounties, aes(x=county, y=diffScore)) +
 # 
 # ggplot(noCV, aes(x=pageLen, y=diffScore))+ geom_point()+theme_classic()+labs(x="App length (pages)", y="Difficulty score")+geom_smooth(method="gam")
 
-
-glm1$model$fitted <- predict(glm1, type = "response")
+# glm1$model$fitted <- predict(glm1, type = "response")
 
 # ggplot2 Plot:
-
-ggplot(glm1$model) + 
-  geom_point(aes(Acreage, diffScore)) +
-  geom_line(aes(Acreage, fitted)) + 
-  labs(x = "\n acreage", y = "diffscore \n") +
-  theme(plot.title = element_text(hjust = 0.5),
-        axis.title.x = element_text(face="bold", colour="blue", size = 12),
-        axis.title.y = element_text(face="bold", colour="blue", size = 12))
+# ggplot(glm1$model) + 
+#   geom_point(aes(Acreage, diffScore)) +
+#   geom_line(aes(Acreage, fitted)) + 
+#   labs(x = "\n acreage", y = "diffscore \n") +
+#   theme(plot.title = element_text(hjust = 0.5),
+#         axis.title.x = element_text(face="bold", colour="blue", size = 12),
+#         axis.title.y = element_text(face="bold", colour="blue", size = 12))
