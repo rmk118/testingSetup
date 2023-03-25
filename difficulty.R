@@ -48,14 +48,14 @@ onlyOysters<- data %>%
   mutate(oysters=TRUE) %>% 
   mutate(oysters = replace(oysters, Leaseholder == "Moosabec Mussels, Inc.", FALSE)) %>% 
   mutate(oysters = replace(oysters, Leaseholder == "Cooke Aquaculture USA, Inc.", FALSE)) %>% 
-  mutate(oysters = replace(oysters, Leaseholder == "Wild Ocean Aquaculture, LLC.", FALSE)) %>% 
+  mutate(oysters = replace(oysters, Leaseholder == "Wild Ocean Aquaculture, LLC.", FALSE)) %>% #they have 3 leases
   mutate(oysters = replace(oysters, Leaseholder == "Damariscove Seafood LLC.", FALSE)) %>% 
-  mutate(oysters = replace(oysters, Leaseholder == "West, James and Springtide Seaweed, LLC", FALSE))
+  mutate(oysters = replace(oysters, Leaseholder == "West, James and Springtide Seaweed, LLC", FALSE)) 
 
 onlyOysters<- onlyOysters %>% 
   filter(oysters==TRUE)
 
-noCV<- noMussels %>% filter(pageLen < 80)
+# noCV<- noMussels %>% filter(pageLen < 80)
 # noCV2<- noMussels %>% 
 #   mutate(pageLen=replace(pageLen, Site.ID=="EAST TB", 57))
 
@@ -134,8 +134,14 @@ wilcox.test(data=data, diffScore ~ pound, alternative = "greater")
 dataSmall <- data %>% filter(Acreage <=17.3)
 wilcox.test(data=dataSmall, diffScore ~ pound, alternative = "greater")
 
+dataSmall2 <- onlyOysters %>% filter(Acreage <=17.3)
+wilcox.test(data=dataSmall2, diffScore ~ pound, alternative = "greater")
+
 dataSmaller <- data %>% filter(Acreage <=4.15)
 wilcox.test(data=dataSmaller, diffScore ~ pound, alternative = "greater")
+
+dataSmaller2 <- onlyOysters %>% filter(Acreage <=4.15)
+wilcox.test(data=dataSmaller2, diffScore ~ pound, alternative = "greater")
 
 wilcox.test(data=data, diffScore ~ leaseType)
 wilcox.test(data=onlyOysters, diffScore ~ leaseType)
@@ -173,19 +179,35 @@ ggplot(dataSmall, aes(x=diffScore, fill=pound))+geom_histogram(binwidth = 0.5, p
 #diff score histogram all
 allPlot<-ggplot(data, aes(x=diffScore, fill=pound))+geom_histogram(binwidth = 1)+theme_classic()+labs(x="Difficulty score", y="Number of leases")+guides(fill=guide_legend("Pound?"), color="none")+scale_fill_grey(start=0.7, end=0.1)+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=12))+scale_x_continuous(breaks=seq(0,12,1))
 
+allPlot2<-ggplot(onlyOysters, aes(x=diffScore, fill=pound))+geom_histogram(binwidth = 1)+theme_classic()+labs(x="Difficulty score", y="Number of leases")+guides(fill=guide_legend("Pound?"), color="none")+scale_fill_grey(start=0.7, end=0.1)+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=12))+scale_x_continuous(breaks=seq(0,12,1))
+
 #diff score histogram - only leases <17.3
 smallPlot<-ggplot(dataSmall, aes(x=diffScore, fill=pound))+geom_histogram(binwidth = 1)+theme_classic()+labs(x="Difficulty Score", y="Number of leases")+guides(fill=guide_legend("Pound?"), color="none")+scale_fill_grey(start=0.7, end=0.1)+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=12))+scale_x_continuous(breaks=seq(0,12,1), limits = c(-1,12))
 smallPlot
+
+#diff score histogram - only leases <17.3 only oysters
+smallPlot2<-ggplot(dataSmall2, aes(x=diffScore, fill=pound))+geom_histogram(binwidth = 1)+theme_classic()+labs(x="Difficulty Score", y="Number of leases")+guides(fill=guide_legend("Pound?"), color="none")+scale_fill_grey(start=0.7, end=0.1)+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=12))+scale_x_continuous(breaks=seq(0,12,1), limits = c(-1,12))
+smallPlot2
+
+smallPlot+smallPlot2
 
 #diff score histogram - only leases <4.16
 smallerPlot<-ggplot(dataSmaller, aes(x=diffScore, fill=pound))+geom_histogram(binwidth = 1)+theme_classic()+labs(x="Difficulty Score", y="Number of leases")+guides(fill=guide_legend("Pound?"), color="none")+ylim(0,30)+scale_fill_grey(start=0.7, end=0.1)+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=12))+scale_x_continuous(breaks=c(0:12), limits = c(-1,12))
 smallerPlot
 
-#Acreage histogram no Outlier
+#diff score histogram - only leases <4.16 only oysters
+smallerPlot2<-ggplot(dataSmaller2, aes(x=diffScore, fill=pound))+geom_histogram(binwidth = 1)+theme_classic()+labs(x="Difficulty Score", y="Number of leases")+guides(fill=guide_legend("Pound?"), color="none")+ylim(0,30)+scale_fill_grey(start=0.7, end=0.1)+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=12))+scale_x_continuous(breaks=c(0:12), limits = c(-1,12))
+smallerPlot2
+
+smallerPlot+smallerPlot2
+
+#Acreage histogram no outlier
 noMusselsAcreage<-ggplot(noMussels, aes(x=Acreage, fill=pound))+geom_histogram(binwidth = 1, alpha = 0.5, position = "identity")+theme_classic()+labs(x="Acreage", y="Number of leases")+guides(fill=guide_legend("Pound?"), color="none")+scale_x_continuous(breaks=seq(0,90,10))+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=12))
 
-#Histogram figure in manuscript (original results section Fig. 2)
 allPlot + smallPlot + smallerPlot +plot_layout(ncol=3,guides = 'collect')+ plot_annotation(tag_levels = 'A') & theme(legend.position = "right", text = element_text(size=14))
+
+#Histogram figure in manuscript (original results section Fig. 2)
+allPlot2 + smallPlot2 + smallerPlot2 +plot_layout(ncol=3,guides = 'collect')+ plot_annotation(tag_levels = 'A') & theme(legend.position = "right", text = element_text(size=14))
 
 
 # Robust linear regression ------------------------------------------------
