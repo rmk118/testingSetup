@@ -143,7 +143,7 @@ model_lmSize<-summary(lmSize)
 AIC(sizeCounty1, size1, lmSize)
 
 
-onlyOysters<- data %>% 
+onlyOysters2<- data %>% 
   mutate(oysters=TRUE) %>% 
   mutate(oysters = replace(oysters, Leaseholder == "Moosabec Mussels, Inc.", FALSE)) %>% 
   mutate(oysters = replace(oysters, Leaseholder == "Cooke Aquaculture USA, Inc.", FALSE)) %>% 
@@ -151,7 +151,7 @@ onlyOysters<- data %>%
   mutate(oysters = replace(oysters, Leaseholder == "Damariscove Seafood LLC.", FALSE)) %>% 
   mutate(oysters = replace(oysters, Leaseholder == "West, James and Springtide Seaweed, LLC", FALSE))
   
-onlyOysters<- onlyOysters %>% 
+onlyOysters<- onlyOysters2 %>% 
   filter(oysters==TRUE)
 
 hist(onlyOysters$diffScore)
@@ -302,3 +302,8 @@ ggplot(dataCounties, aes(x=county, y=diffScore)) +
 #   theme(plot.title = element_text(hjust = 0.5),
 #         axis.title.x = element_text(face="bold", colour="blue", size = 12),
 #         axis.title.y = element_text(face="bold", colour="blue", size = 12))
+
+onlyOysters3 <- onlyOysters2 %>% 
+  filter(Acreage < 70)
+  
+ggplot(onlyOysters3, aes(x=Acreage,y=diffScore,fill=oysters, color=oysters)) + geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")

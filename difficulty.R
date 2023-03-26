@@ -303,4 +303,4 @@ scatternoMusselsColored<-ggplot(noMussels, aes(x=Acreage, y=diffScore, color=lea
 scatternoMusselsColored+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
 
 
-
+scatterHighlights<-ggplot(data, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")
