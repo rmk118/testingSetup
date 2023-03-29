@@ -306,4 +306,4 @@ ggplot(dataCounties, aes(x=county, y=diffScore)) +
 onlyOysters3 <- onlyOysters2 %>% 
   filter(Acreage < 70)
   
-ggplot(onlyOysters3, aes(x=Acreage,y=diffScore,fill=oysters, color=oysters)) + geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")
+ggplot(onlyOysters2, aes(x=Acreage,y=diffScore,fill=oysters, color=oysters)) + geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")
