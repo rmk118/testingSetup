@@ -1,5 +1,5 @@
 #Difficulty Scoring Analysis
-#RK 3/24/23
+#RK 4/3/23
 
 library(tidyverse)
 library(rstatix)
@@ -210,78 +210,81 @@ allPlot + smallPlot + smallerPlot +plot_layout(ncol=3,guides = 'collect')+ plot_
 allPlot2 + smallPlot2 + smallerPlot2 +plot_layout(ncol=3,guides = 'collect')+ plot_annotation(tag_levels = 'A') & theme(legend.position = "right", text = element_text(size=14))
 
 
-# Robust linear regression ------------------------------------------------
-model.r = rfit(diffScore ~ Acreage, data = data)
-modelSum<-summary(model.r)
+# # Robust linear regression ------------------------------------------------
+# model.r = rfit(diffScore ~ Acreage, data = data)
+# modelSum<-summary(model.r)
+# 
+# model.r2 = rfit(diffScore ~ Acreage, data = noCV)
+# summary(model.r2)
+# modelSum2<-summary(model.r2)
+# 
+# model.r3 = rfit(diffScore ~ Acreage, data = noMussels)
+# summary(model.r3)
+# modelSum3<-summary(model.r3)
+# 
+# 
+# #Only leases <17.3
+# model.r3 = rfit(diffScore ~ Acreage, data = dataSmall)
+# summary(model.r3)
+# modelSum2<-summary(model.r3)
+# 
+# #Only leases <4.16
+# model.r4 = rfit(diffScore ~ Acreage, data = dataSmaller)
+# summary(model.r4)
+# modelSum2<-summary(model.r4)
+# 
+# model.r5 = rfit(diffScore ~ Acreage*pageLen, data = noCV)
+# summary(model.r5)
+# 
+# model.r6 = rfit(diffScore ~ Acreage + pageLen, data = noCV)
+# summary(model.r6)
 
-model.r2 = rfit(diffScore ~ Acreage, data = noCV)
-summary(model.r2)
-modelSum2<-summary(model.r2)
-
-model.r3 = rfit(diffScore ~ Acreage, data = noMussels)
-summary(model.r3)
-modelSum3<-summary(model.r3)
-
-
-#Only leases <17.3
-model.r3 = rfit(diffScore ~ Acreage, data = dataSmall)
-summary(model.r3)
-modelSum2<-summary(model.r3)
-
-#Only leases <4.16
-model.r4 = rfit(diffScore ~ Acreage, data = dataSmaller)
-summary(model.r4)
-modelSum2<-summary(model.r4)
-
-model.r5 = rfit(diffScore ~ Acreage*pageLen, data = noCV)
-summary(model.r5)
-
-model.r6 = rfit(diffScore ~ Acreage + pageLen, data = noCV)
-summary(model.r6)
-
-# Scatterplots ------------------------------------------------
-eqn <- sprintf(
-  "italic(y) == %.3g + %.2g * italic(x)  * ',' ~~ italic(p) ~ '=' ~ %.3g",
-  coef(model.r)[1],
-  coef(model.r)[2],
-  modelSum$coefficients[2,4]
-)
-
-eqn2 <- sprintf(
-  "italic(y) == %.3g + %.2g * italic(x) * ',' ~~ italic(p) ~ '=' ~ %.3g",
-  coef(model.r2)[1],
-  coef(model.r2)[2],
-  modelSum2$coefficients[2,4]
-)
+# # Scatterplots ------------------------------------------------
+# eqn <- sprintf(
+#   "italic(y) == %.3g + %.2g * italic(x)  * ',' ~~ italic(p) ~ '=' ~ %.3g",
+#   coef(model.r)[1],
+#   coef(model.r)[2],
+#   modelSum$coefficients[2,4]
+# )
+# 
+# eqn2 <- sprintf(
+#   "italic(y) == %.3g + %.2g * italic(x) * ',' ~~ italic(p) ~ '=' ~ %.3g",
+#   coef(model.r2)[1],
+#   coef(model.r2)[2],
+#   modelSum2$coefficients[2,4]
+# )
 
 
-scatterAll<-ggplot(data, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
-  annotate(
-    "text",
-    x = Inf, y = -Inf,
-    label = eqn, parse = TRUE,
-    hjust = 1.1, vjust = -1.1
-  )
+scatterAll<-ggplot(data, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")
+#+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
+#   annotate(
+#     "text",
+#     x = Inf, y = -Inf,
+#     label = eqn, parse = TRUE,
+#     hjust = 1.1, vjust = -1.1
+#   )
 scatterAll
 
 ggplot(data, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")
 
-scatternoMussels<-ggplot(noMussels, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
-  annotate(
-    "text",
-    x = Inf, y = -Inf,
-    label = eqn2, parse = TRUE,
-    hjust = 1.1, vjust = -1.1
-  )
-scatternoMussels
+scatternoMussels<-ggplot(noMussels, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")
+# +geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])
+# +annotate(
+#     "text",
+#     x = Inf, y = -Inf,
+#     label = eqn2, parse = TRUE,
+#     hjust = 1.1, vjust = -1.1
+#   )
+# scatternoMussels
 
 #FIGURE 1 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-scatternoMussels<-ggplot(noMussels, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
-  annotate(
-    "text",
-    x =15, y = 10,
-    label = eqn2, parse = TRUE
-  )
+scatternoMussels<-ggplot(noMussels, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")
+# +geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
+#   annotate(
+#     "text",
+#     x =15, y = 10,
+#     label = eqn2, parse = TRUE
+#   )
 scatternoMussels+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -294,12 +297,13 @@ scatterAll + scatternoMussels + plot_annotation(tag_levels = 'A') & theme(axis.t
 
 scatterSmall<-ggplot(dataSmall, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r3$coefficients[1], slope=model.r3$coefficients[2])
 
-scatternoMusselsColored<-ggplot(noMussels, aes(x=Acreage, y=diffScore, color=leaseType))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")+geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
-  annotate(
-    "text",
-    x =15, y = 10,
-    label = eqn2, parse = TRUE
-  )
+scatternoMusselsColored<-ggplot(noMussels, aes(x=Acreage, y=diffScore, color=leaseType))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")
+# +geom_abline(intercept=model.r2$coefficients[1], slope=model.r2$coefficients[2])+
+#   annotate(
+#     "text",
+#     x =15, y = 10,
+#     label = eqn2, parse = TRUE
+#   )
 scatternoMusselsColored+theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14))
 
 

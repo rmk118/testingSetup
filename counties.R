@@ -1,5 +1,5 @@
 #County Analysis
-#RK 3/16/23
+#RK 4/3/23
 
 library(tidyverse)
 library(rstatix)
@@ -10,6 +10,7 @@ library(ggpubr)
 library(ggpmisc)
 library(mgcv)
 library(visreg)
+library(viridis)
 
 #Input data
 data<-read.csv("difficulty.csv")
@@ -305,5 +306,26 @@ ggplot(dataCounties, aes(x=county, y=diffScore)) +
 
 onlyOysters3 <- onlyOysters2 %>% 
   filter(Acreage < 70)
+
+
+# Fig1b<-
+Fig1b<-ggplot(onlyOysters2, aes(x=Acreage, y=diffScore, group=oysters)) + 
+  geom_point(aes(color=oysters)) +
+  theme_classic()+
+  labs(x="Acreage", y="Difficulty score", color="Cultivated species") +
+  scale_color_manual(values=c('Red', "Black"), name = "Cultivated species", labels = c("Other", "American oyster")) +
+  guides(color = guide_legend(reverse=TRUE)) +
+  annotate("text", x = 38, y = 11, label = "A")+
+  annotate("text", x = 7, y = 8, label = "B") +
+  #annotate("text", x = 19, y = 8, label = "C")+
+  theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14), legend.text = element_text(size=10), legend.title = element_text(size=12))
+
+Fig1a<-
+  tweedieGraph +
+  annotate("text", x = 36, y = 11, label = "A")+
+  annotate("text", x = 4, y = 8, label = "B")
+
+Fig1a + Fig1b +plot_layout(ncol=2)+ plot_annotation(tag_levels = 'A') & theme(legend.position = "right", text = element_text(size=14))
   
-ggplot(onlyOysters2, aes(x=Acreage,y=diffScore,fill=oysters, color=oysters)) + geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")
+ 
+
