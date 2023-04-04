@@ -317,13 +317,14 @@ Fig1b<-ggplot(onlyOysters2, aes(x=Acreage, y=diffScore, group=oysters)) +
   guides(color = guide_legend(reverse=TRUE)) +
   annotate("text", x = 38, y = 11, label = "A")+
   annotate("text", x = 7, y = 8, label = "B") +
-  #annotate("text", x = 19, y = 8, label = "C")+
+  annotate("text", x = 19, y = 8, label = "C")+
   theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14), legend.text = element_text(size=10), legend.title = element_text(size=12))
 
 Fig1a<-
   tweedieGraph +
   annotate("text", x = 36, y = 11, label = "A")+
-  annotate("text", x = 4, y = 8, label = "B")
+  annotate("text", x = 4, y = 8, label = "B")+
+  annotate("text", x = 17, y = 8, label = "C")
 
 Fig1a + Fig1b +plot_layout(ncol=2)+ plot_annotation(tag_levels = 'A') & theme(legend.position = "right", text = element_text(size=14))
   
