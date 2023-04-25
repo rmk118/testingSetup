@@ -86,6 +86,12 @@ length(area$areaMod)
 area2 <- noPound2 %>% filter(areaMod > 0)
 length(area2$areaMod)
 
+cond <- data %>% filter(numConditions > 0)
+length(cond$numConditions)
+
+cond2 <- data %>% filter(numConditions == 0)
+length(cond2$numConditions)
+
 #Summary statistics
 data %>% group_by(pound) %>%
   get_summary_stats(diffScore, type = "common")
