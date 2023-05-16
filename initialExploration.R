@@ -67,23 +67,29 @@ ggplot(dataSum3, aes(x=Date, y=sh3, color=Gear)) +geom_line()
 dataSum4<- data %>% 
   group_by(Location, Date, Gear, Treatment) %>% 
   summarise(cr.sd = sd(Cup.ratio, na.rm = TRUE),
+            cr.stder = std.error(Cup.ratio),
             cr = mean(Cup.ratio, na.rm = TRUE))
-ggplot(dataSum4, aes(x=Date, y=cr, color=Location, linetype=Gear)) +geom_line()
+ggplot(dataSum4, aes(x=Date, y=cr, color=Location, linetype=Gear)) +geom_line()+
+  geom_errorbar(aes(ymin=cr-cr.stder, ymax=cr+cr.stder,  color=Location,  linetype=Gear))+
+  facet_wrap(~Gear)
 
 #Cup ratio - in vs out
 dataSum5<- data %>% 
   group_by(Location, Date) %>% 
   summarise(cr2.sd = sd(Cup.ratio, na.rm = TRUE),
+            cr.stder2 = std.error(Cup.ratio),
             cr2 = mean(Cup.ratio, na.rm = TRUE))
-ggplot(dataSum5, aes(x=Date, y=cr2, color=Location)) +geom_line()
+ggplot(dataSum5, aes(x=Date, y=cr2, color=Location)) +geom_line()+
+  geom_errorbar(aes(ymin=cr2-cr.stder2, ymax=cr2+cr.stder2,  color=Location))
 
 #Cup ratio - by gear type
 dataSum6<- data %>% 
   group_by(Gear, Date) %>% 
   summarise(cr3.sd = sd(Cup.ratio, na.rm = TRUE),
+            cr.stder3 = std.error(Cup.ratio),
             cr3 = mean(Cup.ratio, na.rm = TRUE))
-
-ggplot(dataSum6, aes(x=Date, y=cr3, color=Gear)) +geom_line()
+ggplot(dataSum6, aes(x=Date, y=cr3, color=Gear)) +geom_line()+
+  geom_errorbar(aes(ymin=cr3-cr.stder3, ymax=cr3+cr.stder3,  color=Gear))
 
 
 # Environmental data ---------------------------------------------------------------
@@ -114,6 +120,7 @@ turbiditySummary<- turbidity %>%
 turbiditySummary
 
 turbidityGraph<-ggplot(turbiditySummary, aes(x=Date, y=meanTurbidity, group=Location, color=Location))+ geom_line()+ylab("Turbidity")+xlab("")+theme(axis.title.y = element_text(margin = margin(r = 10)))+geom_errorbar(aes(ymin=meanTurbidity+se, ymax=meanTurbidity-se), width=.2,position=position_dodge(0.05))
+turbidityGraph
 
 # ChlA --------------------------------------------------------------------
 ChlaDatasheet<-read.csv("chlA.csv")
