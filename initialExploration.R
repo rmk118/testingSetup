@@ -4,12 +4,10 @@
 library(tidyverse)
 library(lubridate)
 library(car)
-library(ARTool)
+#library(ARTool)
 library(tidyquant)
 library(plotrix)
 library(patchwork)
-
-
 
 # Oyster Data -------------------------------------------------------------
 
