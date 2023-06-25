@@ -1,11 +1,12 @@
 #Bremen Oyster Data Statistical Tests
 #Ruby Krasnow
-#Last modified 6/24/23
+#Last modified 6/25/23
 
 library(tidyverse)
 library(lubridate)
 library(ggpubr)
 library(rstatix)
+
 # Salinity ----------------------------------------------------------------
 
 #read data
@@ -79,16 +80,35 @@ sal<- sal %>%
 summer <- sal %>% 
   filter(date < "2022-09-01 01:00:00")
 
+ggplot(sal, aes(x=date, y=avgSalDiff))+geom_line()
 ggplot(summer, aes(x=date, y=avgSalDiff))+geom_line()
+
+ggplot(common, aes(x=Date.time, y=sal_rolling, group=Location, color=Location))+geom_line()
+ggplot(commonSummer, aes(x=Date.time, y=sal_rolling, group=Location, color=Location))+geom_line()
 
 commonSummer <- common %>% 
   filter(Date.time < "2022-09-01 01:00:00")
 
 stat.test <- commonSummer  %>%
-  sign_test(sal_rolling ~ Location) %>%
+  sign_test(sal_rolling ~ Location, detailed = TRUE) %>%
   add_significance()
 stat.test
+
+stat.test2 <- common  %>%
+  sign_test(sal_rolling ~ Location, detailed = TRUE) %>%
+  add_significance()
+stat.test2
 
 commonSummer %>% 
   group_by(Location) %>% 
 get_summary_stats(sal_rolling)
+
+test<- summer %>%  filter (avgSalDiff > 0)
+length(test$date)/1937
+1442/1937
+
+sign_test(common2, salDiffs ~ 1, mu=0)
+test<- common2 %>%  filter (salDiffs > 0)
+length(test$salDiffs)/2696
+
+rm(list=ls())
