@@ -166,9 +166,13 @@ kruskal.test(data=noExp2, diffScore ~ appType)
 
 # Dotplots and histograms ------------------------------------------------------------------
 
-ggplot(data, aes(x=diffScore))+geom_histogram(binwidth = 1)+theme_classic()
+ggplot(data, aes(x=diffScore))+
+  geom_histogram(binwidth = 1)+
+  theme_classic()
+
 #basic acreage histogram
-ggplot(data, aes(x=Acreage, fill=pound, color=pound))+geom_histogram()
+ggplot(data, aes(x=Acreage, fill=pound, color=pound))+
+  geom_histogram()
 
 #Difficulty Score dotplot
 ggplot(data, aes(x=diffScore, fill=pound, color=pound))+geom_dotplot(binwidth = 0.25, stackratio = 1.3, dotsize = 1.25)+theme_classic()+theme(axis.title.y = element_blank())+labs(x="Difficulty Score", y="")+scale_y_continuous(breaks = NULL)+scale_fill_grey(start=0.7, end=0.1)+scale_color_grey(start=0.7, end=0.1)+ guides(fill=guide_legend("Pound?"), color="none")
@@ -314,3 +318,33 @@ scatternoMusselsColored+theme(axis.title.y = element_text(margin = margin(r = 12
 
 
 scatterHighlights<-ggplot(data, aes(x=Acreage, y=diffScore))+ geom_point()+theme_classic()+labs(x="Acreage", y="Difficulty score")
+
+
+
+table4<- onlyOysters %>% group_by(pound) %>%
+  # get_summary_stats(c(diffScore, numConditions, Acreage, numWitOpp, numWitFor),
+  get_summary_stats(c(diffScore, numConditions, Acreage, numWitOpp, numWitFor),
+                    show=c("mean", "sd")) %>% 
+  mutate(avg = paste(round(mean,2), "±", round(sd, 2))) %>% 
+  dplyr::select(pound, variable, avg) %>% 
+  pivot_wider(values_from = avg, names_from = pound) %>% 
+  mutate(variable=case_when(
+    variable=="diffScore" ~ "Mean difficulty score (±SD)",
+    variable=="numConditions" ~ "Mean number of conditions on lease (±SD)",
+    variable=="Acreage" ~ "Mean acreage (±SD)", 
+    variable=="numWitOpp" ~ "Mean number of witnesses per lease testifying\n in opposition (±SD)", 
+    variable=="numWitFor" ~ "Mean number of witnesses per lease testifying\n on behalf of applicant (±SD)",.default=variable ))
+
+table4 <- table4 %>% 
+  gt() %>% 
+  rows_add(
+    variable="Number of standard or experimental leases", No = "5",Yes= "89",.before=1) %>% 
+  rows_add(variable="% of leases with witnesses testifying\n in opposition",No="0%", Yes="19%",.before=6) %>% 
+  rows_add(variable="% of leases with witnesses testifying\n on behalf of applicant",No="0%", Yes="4.5%") %>% 
+  rows_add(variable="% of leases with required modification\n of originally-proposed lease area",No="0%", Yes="19%") %>% 
+  cols_add(blank="", .before=No) %>% 
+  cols_label(variable="", blank="",Yes="Pound", No="No Pound")
+
+table4 %>% 
+  cols_width(No~px(120), Yes~px(90),variable~px(450), blank~px(15))
+
