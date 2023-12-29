@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?><metadata>
+    <idinfo>
+        <citation>
+            <citeinfo>
+                <title>MaineDMR - Lobster Pounds 2019</title>
+            </citeinfo>
+        </citation>
+        <descript>
+            <abstract>Polygons representing current and historic lobster pounds in Maine. Lobster pounds are structures where large volumes of lobsters are held before being marketed. Pounds are usually constructed as permeable structures that close off the entrance of a cove.Since 1998, DMR has mapped lobster pounds for use in Environmental Sensitivity Indices that would be utilized during an oil spill response. Pounded lobsters could become contaminated during a spill, and the permeability of pounds can make oil recovery difficult.Pounds were initially mapped in 1998 as points. Pound locations were largely based on local knowledge and telephone calls. In 2010, pound locations were updated using aerial imagery.The current revision represents pounds as polygons, delineating approximately 270 acres of pounds in current and historic use. Pound boundaries were digitized from aerial imagery; the landward extent of pounds was represented using the 2018 Maine Highest Astronomical Tide line. Attribute information was based on a variety of sources, including company websites, licensing data, current/historical imagery, tax records, and local/departmental knowledge.</abstract>
+            <purpose>Polygons representing current and historic lobster pounds in Maine.</purpose>
+        </descript>
+        <keywords>
+            <theme>
+                <themekt>None</themekt>
+                <themekey>MaineDMR</themekey>
+                <themekey>lobster</themekey>
+                <themekey>ESI</themekey>
+                <themekey>EVI</themekey>
+                <themekey>pounds</themekey>
+            </theme>
+        </keywords>
+        <accconst>None</accconst>
+        <useconst/>
+        <datacred>MaineDMR</datacred>
+    </idinfo>
+    <metainfo>
+        <metd>20190325</metd>
+        <metstdn>FGDC Content Standard for Digital Geospatial Metadata</metstdn>
+        <metstdv>FGDC-STD-001-1998</metstdv>
+        <mettc>local time</mettc>
+    </metainfo>
+</metadata>
