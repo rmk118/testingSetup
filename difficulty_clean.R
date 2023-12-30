@@ -1,6 +1,6 @@
 #Difficulty Scoring Analysis - Updated
 #Ruby Krasnow
-#Last updated: 12/26/23
+#Last updated: 12/29/23
 
 #Import packages
 library(tidyverse)
@@ -148,7 +148,8 @@ tweedieGraph<-ggplot(onlyOysters, aes(x=Acreage, y=diffScore))+
 Fig1a<-tweedieGraph +
   annotate("text", x = 36, y = 11, label = "A")+
   annotate("text", x = 4, y = 8, label = "B")+
-  annotate("text", x = 17, y = 8, label = "C")
+  annotate("text", x = 17, y = 8, label = "C")+
+  ylim(0,17)
 
 # Fig 1b
 Fig1b<-ggplot(onlyOysters_keep, aes(x=Acreage, y=diffScore, group=oysters)) + 
@@ -160,7 +161,8 @@ Fig1b<-ggplot(onlyOysters_keep, aes(x=Acreage, y=diffScore, group=oysters)) +
   annotate("text", x = 38, y = 11, label = "A")+
   annotate("text", x = 7, y = 8, label = "B") +
   annotate("text", x = 19, y = 8, label = "C")+
-  theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14), legend.text = element_text(size=10), legend.title = element_text(size=12))
+  theme(axis.title.y = element_text(margin = margin(r = 12)), axis.title.x = element_text(margin = margin(t = 12)), text=element_text(size=14), legend.text = element_text(size=10), legend.title = element_text(size=12))+
+  ylim(0,17)
 
 # Figure 1
 Fig1a + Fig1b +plot_layout(ncol=2)+ plot_annotation(tag_levels = 'A') & theme(legend.position = "right", text = element_text(size=14))
@@ -224,3 +226,18 @@ table4 <- table4 %>%
   cols_label(variable="", blank="",Yes="Pound", No="No Pound") %>% 
   cols_width(No~px(120), Yes~px(90),variable~px(450), blank~px(15))
 
+data.frame(b=c(1:8), a=c("Ingress and egress of any riparian owner","Navigation","Fishing or other uses of the area","Significant wildlife habitat and marine habitat or with the ability of the lease site and surrounding marine and upland areas to support ecologically significant flora and fauna", "Public use or enjoyment within 1,000 ft of a beach, park, docking facility or certain conserved land owned by the Federal Government, the State Government, or a municipal governmental agency","Will not result in an unreasonable impact from light at the boundaries of the lease site","Will not result in an unreasonable impact from noise at the boundaries of the lease site","Will comply with the visual impact criteria contained in DMR Regulation 2.37(1)(A)(10)")) %>% 
+  gt() %>% 
+  tab_row_group(label="For standard leases only, DMR requires that aquaculture activities proposed:", rows=6:8) %>% 
+  tab_row_group(label="Aquaculture activities proposed for a standard or experimental lease must not “unreasonably interfere” with the following:", rows = 1:5)  %>% 
+  tab_options(column_labels.hidden = TRUE) %>% 
+  tab_style(style=cell_text(weight="bold"),
+            locations=cells_row_groups())
+
+data.frame(b=c(1:8), a=c("Ingress and egress of any riparian owner","Navigation","Fishing","Wildlife/marine habitat", "Public use or enjoyment within 1,000 ft of a beach, park, docking facility or conserved land owned by the federal, state, or municipal govt.","Will not result in an unreasonable impact from light","Will not result in an unreasonable impact from noise","Will comply with the DMR visual impact criteria")) %>% 
+  gt() %>% 
+  tab_row_group(label="For standard leases only, DMR requires that aquaculture activities:", rows=6:8) %>% 
+  tab_row_group(label="Aquaculture activities proposed for a standard or experimental lease must not “unreasonably interfere” with the following:", rows = 1:5)  %>% 
+  tab_options(column_labels.hidden = TRUE) %>% 
+  tab_style(style=cell_text(weight="bold"),
+            locations=cells_row_groups())
