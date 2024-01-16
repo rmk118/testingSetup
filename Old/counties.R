@@ -328,9 +328,6 @@ Fig1a<-
 
 Fig1a + Fig1b +plot_layout(ncol=2)+ plot_annotation(tag_levels = 'A') & theme(legend.position = "right", text = element_text(size=14))
 
-  
- 
-
 ggplot(data, aes(x=appType, y=diffScore, fill=appType))+ geom_boxplot()+theme_classic()+labs(y="Difficulty score", x="Application type")+ theme(axis.text.x = element_blank())+                                        # Add counts by group to boxplot
   annotate("text",
            x = 1:length(table(data$appType)),

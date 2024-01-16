@@ -6,8 +6,8 @@ library(tidyverse)
 library(sf)
 library(leaflet)
 
-pounds_orig <- st_read("./MaineDMR_Lobster_Pounds_2019-shp/MaineDMR_-_Lobster_Pounds_2019.shp")
-states <- st_read("./cb_2022_us_state_20m/cb_2022_us_state_20m.shp")
+pounds <- st_read("./data/MaineDMR_Lobster_Pounds_2019-shp/MaineDMR_-_Lobster_Pounds_2019.shp")
+states <- st_read("./data/cb_2022_us_state_20m/cb_2022_us_state_20m.shp")
 states <- st_transform(states, 4326) %>% filter(!(NAME %in% c("Hawaii", "Alaska", "Puerto Rico")))
 
 plot(pounds[1])
