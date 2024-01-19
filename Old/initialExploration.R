@@ -314,6 +314,7 @@ summary(slopes(beta_log))
 avg_slopes(beta_log, newdata = datagrid(gear = c("BP", "FB", "FC")))
 
 avg_slopes(beta_log, variable="gear")
+
 slopes(beta_log, variable="gear", newdata = datagrid())
 
 slopes(beta_log, variable=c("gear"), by="location")
@@ -347,9 +348,7 @@ predictions(beta_log, newdata = datagrid(location = c("in", "out"), gear=c("FB",
 
 comparisons(beta_log, variables = "location", by="gear", hypothesis="pairwise")
 
-predictions(
-  beta_log,
-  by = "gear",
+predictions(beta_log, by = "gear",
   newdata = datagrid(gear = unique, location = unique), hypothesis="pairwise")
 
 # Equivalent but not contrasts of interest
@@ -387,3 +386,51 @@ ggplot(plot_effects %>% filter(contrast=="FC - BP"), aes(x = estimate * 100, y =
   labs(x = "Marginal effect (percentage points)", y = NULL) +
   # scale_color_manual(values = c(clrs[2], clrs[5]), guide = "none") +
   theme_bw()
+
+plot_predictions(beta_log, condition = c("gear", "location"))
+
+
+nd <- datagrid(
+  model = beta_log,
+  gear = ratios$gear,
+  location = ratios$location,
+  date=ratios$date)
+nrow(nd)
+
+cmp <- comparisons(beta_log,
+                   variables = list("gear" = "pairwise"),
+                   newdata = nd,
+                   type = "response")
+nrow(cmp)
+
+avg_comparisons(beta_log,
+                by = "location",
+                variables = list("gear" = "pairwise"),
+                newdata = nd,
+                type = "response")
+
+emm_gear_by_loc<-emmeans(beta_log, specs="gear",by="location", regrid = "response")
+emmeans::contrast(emm_gear_by_loc, method = "revpairwise")
+
+
+predictions(beta_log, by = "gear", hypothesis="pairwise") #gear, across all locations and dates
+predictions(beta_log, by = "location", hypothesis="pairwise") #location, across all gears and dates
+
+
+
+pairs(emmeans(beta_log, "gear", by = "location", at = list(date=unique(ratios$date))),
+      infer = TRUE, adjust = "none", reverse = TRUE)
+
+
+
+library(emmeans)
+emm_gear <- emmeans(beta_log, ~gear, regrid = "response")
+emm_location<- emmeans(beta_log, ~ location, regrid = "response")
+emm_gear_by_loc<-emmeans(beta_log, ~ gear|location, regrid = "response")
+emm_gear_by_loc<-emmeans(beta_log, spec="gear", by="location", regrid = "response")
+emm_loc_by_gear<-emmeans(beta_log, ~ location|gear, regrid = "response")
+
+emmeans::contrast(emm_gear, method = "tukey")
+emmeans::contrast(emm_gear_by_loc, method = "tukey")
+emmeans::contrast(emm_location, method = "tukey")
+emmeans::contrast(emm_loc_by_gear, method = "tukey")

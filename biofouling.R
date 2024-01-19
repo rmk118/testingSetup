@@ -169,14 +169,20 @@ coeftest(beta_log)
 lrtest(beta_log, . ~ . | 1) 
 
 ### For Methods
-# We analyzed fouling ratio using beta regression models from the package betareg (version 3.1-4), which are appropriate for response variables (rates, proportions) bound between 0 and 1. Two influential outliers with unusually high fouling ratios were removed before model fitting. Maximum likelihood was used to estimate coefficients for the mean equation relating the explanatory variables to the response variable as well as parameters for the precision model (i.e., regressors for the precision parameter, phi). The best link function for the mean model was the log-log link; the precision link was left as the default log link. Models were compared on the basis of their Akaike Information Criterion (AIC) values. A threshold of alpha=0.05 was used for all significance testing.
+# We analyzed fouling ratio using beta regression models from the package betareg (version 3.1-4), which are appropriate for response variables (rates, proportions) bound between 0 and 1. Two influential outliers with unusually high fouling ratios were removed before model fitting. Maximum likelihood was used to estimate coefficients for the mean equation relating the explanatory variables to the response variable as well as parameters for the precision model (i.e., regressors for the precision parameter, phi). The best link function for the mean model was the log-log link; the precision link was left as the default log link. Models were compared on the basis of their Akaike Information Criterion (AIC) values. Pairwise post-hoc contrasts were performed using the avg_comparisons function from the package marginaleffects (Arel-Bundock, 2023). This function computes contrasts for each level of the categorical variables and then marginalizes by taking the average of unit-level estimates. A threshold of alpha=0.05 was used for all significance testing.
 
-avg_slopes(beta_log, variable="gear") #gear, across all locations and dates
-avg_slopes(beta_log, variable="location") #location, across all gears and dates
-avg_slopes(beta_log, variable="date") #date, across all gears and locations
+#Tables S1-S4
+avg_comparisons(beta_log, variable=list(gear="pairwise")) #gear, across all locations and dates
+gear_comp
+avg_comparisons(beta_log, variables=list("gear"="pairwise"), by="date") #gear contrasts by date, across locations
+avg_comparisons(beta_log, variables=list("gear"="pairwise"), by="location") #gear contrasts by location, across dates
+avg_comparisons(beta_log, variables=list("gear"="pairwise"), by=c("date", "location")) #gear contrasts for each date and location
 
-comparisons(beta_log, variables=list("gear"="pairwise"), by="date") #gear contrasts by date, across locations
-comparisons(beta_log, variables=list("location"="pairwise"), by="date") #location contrasts by date, across gears
-comparisons(beta_log, variables=list("gear"="pairwise"), by=c("date", "location")) #gear contrasts for each date and location
-comparisons(beta_log, variables=c("location"), by=c("date", "gear")) #location contrasts for each date and gear
+#Table S5
+avg_comparisons(beta_log, variable=list(location="pairwise")) #location, across all gears and dates
+#Table S6
+avg_comparisons(beta_log, variables=list("location"="pairwise"), by="gear") #location contrasts by gear, across dates
 
+avg_comparisons(beta_log, variables=c("location"), by=c("date", "gear")) #location contrasts for each date and gear
+avg_comparisons(beta_log, variables=list("location"="pairwise"), by="date") #location contrasts by date, across gears
+            
