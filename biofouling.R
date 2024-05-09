@@ -1,6 +1,6 @@
 #Analysis of biofouling data from expt conducted at Community Shellfish in Bremen, ME, in Summer 2022
 #Ruby Krasnow
-#Last modified: January 19, 2024
+#Last modified: May 8, 2024
 
 #Load packages
 library(tidyverse)
@@ -9,8 +9,10 @@ library(patchwork)
 library(plotrix)
 library(rstatix)
 library(betareg)
+library(ggpubr) #for stat_cor
 library(lmtest)
 library(marginaleffects)
+library(PNWColors)
 
 # Type/abundance of hard biofouling ---------------------------------------------------
 #Import data
@@ -56,18 +58,19 @@ ggplot(data=types_sum)+
   geom_bar(aes(x=reorder(gear, total),y=total,color=organism, fill=organism), stat="identity", position="dodge")+
   facet_wrap(~location)
 
-#Mean (±SE) number of each organism per oyster
-ggplot(data=types_means)+
+# FIGURE 3 - Mean (±SE) number of each organism per oyster
+ggplot(data=types_means  %>% 
+         mutate(organism=case_match(organism, "slippers"~"snails", .default = organism)))+
   geom_bar(aes(x=gear,y=mean,color=str_to_title(organism), fill=str_to_title(organism)), stat="identity", position="dodge", alpha=0.5)+
   geom_errorbar(aes(x=gear,ymin=mean-se,ymax=mean+se,color=str_to_title(organism)), position=position_dodge(0.9), width=0.25, show.legend = FALSE)+
   facet_wrap(~location, labeller = labeller(location=c("in"="Inside", "out"="Outside")))+
- # scale_color_viridis_d()+
- # scale_fill_viridis_d()+
   theme_bw()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), text = element_text(size=13),
         axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
         axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)))+
-  labs(x="Gear type", y="Mean num per oyster", fill=NULL, color=NULL)
+  labs(x="Gear type", y="Mean num per oyster", fill=NULL, color=NULL)+
+  scale_color_manual(values=pnw_palette("Sailboat",4))+
+  scale_fill_manual(values=pnw_palette("Sailboat",4))
 
 
 # Fouling ratios ----------------------------------------------------------
@@ -84,22 +87,17 @@ ratios <- ratios_raw %>% mutate(fouling_wt = dirty_wt_boat-clean_wt_boat,
 
 ratios <- ratios %>% filter(fouling_ratio<50)
 
+# FIGURE 1 -  Fouling ratio by gear type on each sampling date
 ggplot(data=ratios)+
   geom_boxplot(aes(x=gear, y=fouling_ratio, color=location))+
- facet_wrap(~date)
-
-ggplot(data=ratios)+
-  geom_boxplot(aes(x=location, y=fouling_ratio, color=gear))
- # facet_wrap(~date)
-
-ggplot(data=ratios)+
-  geom_boxplot(aes(x=gear, y=whole_wet_wt, color=location))+
-  facet_wrap(~date)
-
-ggplot(data=ratios, aes(x=whole_wet_wt, y=fouling_ratio, color=location))+
-  geom_point()+
-  geom_smooth(method="lm", aes(linetype=gear), se=FALSE)+
-  facet_wrap(~date)
+ facet_wrap(~date)+
+  theme_bw()+
+  theme(text = element_text(size=13),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)))+
+  labs(x="Gear type", y="Fouling ratio", color="Location")+
+  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)],
+                     labels=c("Inside", "Outside"))
 
 ratios %>% 
   group_by(gear, date, location) %>% 
@@ -144,7 +142,6 @@ beta_models <- beta_models %>%
 beta_full<-betareg(data=ratios, prop_fouling~gear*location*date|gear+location+date)
 summary(beta_full)
 
-
 map(c("logit", "probit", "cloglog", "cauchit", "loglog"),
     ~(logLik(betareg(data=ratios, prop_fouling~gear*location*date|gear+location+date, link = .x))[1]))
 
@@ -169,11 +166,16 @@ coeftest(beta_log)
 lrtest(beta_log, . ~ . | 1) 
 
 ### For Methods
-# We analyzed fouling ratio using beta regression models from the package betareg (version 3.1-4), which are appropriate for response variables (rates, proportions) bound between 0 and 1. Two influential outliers with unusually high fouling ratios were removed before model fitting. Maximum likelihood was used to estimate coefficients for the mean equation relating the explanatory variables to the response variable as well as parameters for the precision model (i.e., regressors for the precision parameter, phi). The best link function for the mean model was the log-log link; the precision link was left as the default log link. Models were compared on the basis of their Akaike Information Criterion (AIC) values. Pairwise post-hoc contrasts were performed using the avg_comparisons function from the package marginaleffects (Arel-Bundock, 2023). This function computes contrasts for each level of the categorical variables and then marginalizes by taking the average of unit-level estimates. A threshold of alpha=0.05 was used for all significance testing.
+# We analyzed fouling ratio using beta regression models from the package betareg (version 3.1-4), which are # appropriate for response variables (rates, proportions) bound between 0 and 1. Two influential outliers
+# with unusually high fouling ratios were removed before model fitting. Maximum likelihood was used to
+# estimate coefficients for the mean equation relating the explanatory variables to the response variable 
+# as well as parameters for the precision model (i.e., regressors for the precision parameter, phi). 
+# The best link function for the mean model was the log-log link; the precision link was left as the default log link. Models were compared on the basis of their Akaike Information Criterion (AIC) values. 
+# Pairwise post-hoc contrasts were performed using the avg_comparisons function from the package marginaleffects (Arel-Bundock, 2023). This function computes contrasts for each level of the categorical variables and then marginalizes by taking the average of unit-level estimates. 
+# A threshold of alpha=0.05 was used for all significance testing.
 
 #Tables S1-S4
 avg_comparisons(beta_log, variable=list(gear="pairwise")) #gear, across all locations and dates
-gear_comp
 avg_comparisons(beta_log, variables=list("gear"="pairwise"), by="date") #gear contrasts by date, across locations
 avg_comparisons(beta_log, variables=list("gear"="pairwise"), by="location") #gear contrasts by location, across dates
 avg_comparisons(beta_log, variables=list("gear"="pairwise"), by=c("date", "location")) #gear contrasts for each date and location
@@ -183,6 +185,32 @@ avg_comparisons(beta_log, variable=list(location="pairwise")) #location, across 
 #Table S6
 avg_comparisons(beta_log, variables=list("location"="pairwise"), by="gear") #location contrasts by gear, across dates
 
-avg_comparisons(beta_log, variables=c("location"), by=c("date", "gear")) #location contrasts for each date and gear
-avg_comparisons(beta_log, variables=list("location"="pairwise"), by="date") #location contrasts by date, across gears
-            
+ggplot(data=ratios, aes(x=whole_wet_wt, y=fouling_ratio, color=location))+
+  geom_point()+
+  geom_smooth(method="lm", aes(x=whole_wet_wt, y=fouling_ratio, color=location, linetype=gear))+facet_wrap(~date)+stat_cor()+stat_regline_equation(position = "jitter")
+
+ggscatter(data=ratios, x="whole_wet_wt", y="fouling_ratio", color="location", add="reg.line")+
+facet_wrap(~date)
+  #stat_cor()+
+  #stat_regline_equation()
+
+ratio_plot <- ggplot(data=ratios)+
+  geom_point(aes(x=whole_wet_wt, y=fouling_ratio, color=gear))+
+  geom_smooth(method="lm", aes(x=whole_wet_wt, y=fouling_ratio, color=gear))+facet_wrap(~location)
+
+ggplot(data=ratios)+
+  geom_point(aes(x=whole_wet_wt, y=fouling_wt, color=location))+
+  geom_smooth(method="lm", aes(x=whole_wet_wt, y=fouling_wt, color=location, linetype=gear))
+
+wt_plot <- ggplot(data=ratios)+
+  geom_point(aes(x=whole_wet_wt, y=fouling_wt, color=gear))+
+  geom_smooth(method="lm", aes(x=whole_wet_wt, y=fouling_wt, color=gear))+facet_wrap(~location)
+
+
+ggplot(data=ratios)+
+  geom_point(aes(x=whole_wet_wt, y=fouling_wt, color=fouling_ratio))
+
+ggplot(data=ratios %>% filter(gear!="BP"))+
+  geom_point(aes(x=whole_wet_wt, y=fouling_wt, color=date))
+
+ratio_plot/wt_plot

@@ -324,6 +324,10 @@ hypotheses(beta_log)
 
 glht(beta_log)
 
+# ggplot(data=ratios, aes(x=whole_wet_wt, y=fouling_ratio, color=location))+
+#   geom_point()+
+#   geom_smooth(method="lm", aes(linetype=gear), se=FALSE)+
+#   facet_wrap(~date)
 
 #avg_slopes(beta_log, variable=c("gear"), by="date") #same as above without FC-FB contrasts
 
@@ -434,3 +438,8 @@ emmeans::contrast(emm_gear, method = "tukey")
 emmeans::contrast(emm_gear_by_loc, method = "tukey")
 emmeans::contrast(emm_location, method = "tukey")
 emmeans::contrast(emm_loc_by_gear, method = "tukey")
+
+avg_comparisons(beta_log, variables=c("location"), by=c("date", "gear")) #location contrasts for each date and gear
+avg_comparisons(beta_log, variables=list("location"="pairwise"), by="date") #location contrasts by date, across gears
+
+em
