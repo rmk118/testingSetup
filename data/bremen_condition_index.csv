@@ -1,4 +1,4 @@
-date,location,gear,trt,oyster_num,s_boat,t_boat,clean_wt_in_S,dry_tissue_in_T,dry_shell_in_S
+date,gear,loc,trt,oyster_num,s_boat,t_boat,clean_wt_in_S,dry_tissue_in_T,dry_shell_in_S
 6/16/22,initial,initial,initial,1,2.122,2.120,12.635,2.318,8.941
 6/16/22,initial,initial,initial,2,2.132,2.123,8.831,2.249,6.744
 6/16/22,initial,initial,initial,3,2.117,2.123,3.618,2.163,3.000

@@ -443,3 +443,9 @@ avg_comparisons(beta_log, variables=c("location"), by=c("date", "gear")) #locati
 avg_comparisons(beta_log, variables=list("location"="pairwise"), by="date") #location contrasts by date, across gears
 
 em
+
+
+# May 2024  ---------------------------------------------------------------
+
+# g <- expand_grid(location=c("in", "out"), gear=c("FB", "FC", "BP")) %>% 
+#   mutate(date=mdy("6/3/22"), height_mean=47.64, height_sd=11.72) %>% bind_rows(g)
