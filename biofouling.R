@@ -150,6 +150,7 @@ map(c("logit", "probit", "cloglog", "cauchit", "loglog"),
 
 beta_log<-betareg(data=ratios, prop_fouling~gear*location*date|gear+location+date, link="loglog")
 summary(beta_log)
+tidy(beta_log)
 
 par(mfrow=c(2,2), mar=c(1,1,1,1))
 plot(beta_log)
@@ -165,6 +166,7 @@ shapiro.test(residuals(beta_log))
 coeftest(beta_log)
 lrtest(beta_log, . ~ . | 1) 
 r2_efron(beta_log)
+joint_tests(beta_log)
 
 ### For Methods
 # We analyzed fouling ratio using beta regression models from the package betareg (version 3.1-4), which are # appropriate for response variables (rates, proportions) bound between 0 and 1. Two influential outliers

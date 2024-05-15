@@ -3,7 +3,7 @@
 #  By Ruby Krasnow, based on the template
 # "A versatile workflow for linear modelling in R" created by
 #  Matteo Santon, Fraenzi Korner-Nievergelt, Nico Michiels, Nils Anthes
-#  Last modified: May 14, 2024
+#  Last modified: May 15, 2024
 #---------------------------------------------------#
 
 # Activate the support 'functions file' for this routine:
@@ -19,12 +19,12 @@ ratios_raw <- read_csv("./data/bremen_biofouling_ratios.csv", show_col_types = F
 ratios <- ratios_raw %>% mutate(fouling_wt = dirty_wt_boat-clean_wt_boat,
                                 whole_wet_wt = clean_wt_boat-weigh_boat,
                                 prop_fouling=fouling_wt/whole_wet_wt,
-                                fouling_ratio=prop_fouling*100,
+                                #fouling_ratio=prop_fouling*100,
                                 gear = as.factor(gear),
                                 loc = as.factor(location),
                                 date = as.factor(date), .keep="unused")
   
-df <- ratios %>%   filter(fouling_ratio>0 & fouling_ratio<60) #remove negative values 
+df <- ratios %>%   filter(prop_fouling>0 & prop_fouling<60) #remove negative values 
 #and one highly influential outlier likely resulting from measurement/recording error
 
 
@@ -150,7 +150,7 @@ disp_models <- tibble(disp_formula,
   add_column(id=names(disp_formula), .before=1)
 
 disp_models <- disp_models %>% 
-  mutate(tidy_model = map(models, tidy),
+  mutate(tidy_model = map(models, broom.mixed::tidy),
          AIC=map(models, AIC),
          resids = map(models, residuals)) %>% unnest(cols=c(AIC)) %>%
   mutate(resids = map(resids, as.numeric()),
@@ -159,7 +159,7 @@ disp_models <- disp_models %>%
   mutate(logLik=map(models, ~(logLik(.x)[1]))) %>% 
   unnest(cols=c(logLik)) %>% arrange(AIC)
 
-mod2 <- update(mod, dispformula=~gear*loc*date)
+mod2 <- update(mod, dispformula=~date*gear*loc)
 
 
 #-######################-#
@@ -170,6 +170,7 @@ mod2 <- update(mod, dispformula=~gear*loc*date)
 #========================#
 
 plot(simulateResiduals(mod2))
+check_residuals(mod2)
 
 residual_plots(data = df,
                modelTMB = mod2,
@@ -222,8 +223,36 @@ comp_int(modelTMB = mod2,
            ci_range = 0.95,     # Compatibility interval range.
            effects = "fixed")
 
-
+tidy(mod2)
 summary(mod2)
-joint_tests(mod2)
+joint_tests(mod2) %>% arrange(-F.ratio)
 r2_efron(mod2)
 
+
+create_supp_tab <- function(variable, by=TRUE) {
+  avg_comparisons(mod2, vcov=vcov(mod2), variables=variable, by=by, p_adjust = "bonferroni") %>% 
+    select(any_of(c("term", "contrast", "date", "gear", "loc", "estimate", "std.error", 
+                    "statistic","p.value", "conf.low", "conf.high"))) %>% 
+    dplyr::rename("SD"="std.error", "P-value"="p.value") %>% 
+   gt() %>% 
+   fmt_number(decimals =4) %>% 
+    sub_small_vals(threshold = 0.001) %>% 
+    tab_style(locations = cells_column_labels(columns=any_of(c("term", "contrast", "date", "gear", "loc", "estimate", "std.error", "statistic", "conf.low", "conf.high"))),
+              style = cell_text(transform = "capitalize")) %>% 
+    tab_style(locations = cells_body(columns="term"),
+              style = cell_text(transform = "capitalize"))
+}
+
+
+#Supplementary tables
+s1 <- create_supp_tab(variable=list(gear="pairwise")) #gear, across all locations and dates
+s2 <- create_supp_tab(variable=list(loc="pairwise")) #location, across all gears and dates
+
+s3 <- create_supp_tab(variable=list("gear"="pairwise"), by="date") #gear contrasts by date, across locations
+s4 <- create_supp_tab(variable=list("gear"="pairwise"), by="loc") #gear contrasts by location, across dates
+s5 <- create_supp_tab(variable=list("loc"="pairwise"), by="gear") #location contrasts by gear, across dates
+s6 <- create_supp_tab(variable=list("gear"="pairwise"), by=c("date", "loc")) #gear contrasts for each date and location
+
+
+supp_tabs <- gt_group(s1, s2, s3, s4, s5, s6)
+supp_tabs
