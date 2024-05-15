@@ -449,3 +449,13 @@ em
 
 # g <- expand_grid(location=c("in", "out"), gear=c("FB", "FC", "BP")) %>% 
 #   mutate(date=mdy("6/3/22"), height_mean=47.64, height_sd=11.72) %>% bind_rows(g)
+
+# emm.src <- emmeans(mod2, specs=~"gear*loc*date", type="response")
+# 
+# str(regrid(emm.src))
+# 
+# summary(emm.src, infer = TRUE)
+# summary(emm.src, infer = TRUE, type = "response")
+# summary(regrid(emm.src), infer = TRUE)
+# 
+# plot(emm.src)

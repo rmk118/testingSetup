@@ -1,5 +1,5 @@
 #Updated analysis of data from Bremen oyster experiment
-#Last modified: May 12, 2024
+#Last modified: May 15, 2024
 #Ruby Krasnow
 
 library(tidyverse)
@@ -7,7 +7,7 @@ library(patchwork)
 library(corrplot)
 library(GGally)
 library(Hmisc)
-
+library(ggstatsplot)
 
 # Temp and Salinity -------------------------------------------------------
 
@@ -173,7 +173,8 @@ SPM_final <- SPM_final_data %>%
 
 # Theme for creating extra classy gg plots
 mytheme <- theme_classic()+theme(legend.position = "bottom",
-                 axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)))
+                 axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+                 axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)))
 
 TPM_mg_L <- ggplot(SPM_final) +
   geom_point(aes(x = Date, y = TPM_mg_L, colour = Type)) +
@@ -332,21 +333,97 @@ chl_plot+
 
 # Mortality ---------------------------------------------------------------
 
-m_data <- read.csv("./data/bremen_mortality.csv")
+m_data <- data.frame(read.csv("./data/bremen_mortality.csv")) %>% 
+  dplyr::rename(num=num_remaining, loc=location) %>% 
+  mutate(cage_id = if_else(trt %in% c("FBi", "FBo"), "FB", cage_id))
 
-ggboxplot(m_data, x = "location", y = "num_remaining", color="gear", add = "jitter")
-ggboxplot(m_data, x = "gear", y = "num_remaining", color="location", add = "jitter")
+ggboxplot(m_data, x = "loc", y = "num", color="gear", add = "jitter")
+ggboxplot(m_data, x = "gear", y = "num", color="loc", add = "jitter")
 
+
+m_formula <- list(
+  a = num ~ gear*loc+cage_id,
+  b = num ~ gear+gear:cage_id,
+  c = num~gear+cage_id,
+  d = num~gear*cage_id,
+  e= num~gear,
+  g= num~loc,
+  h= num~gear+loc)
+
+m_models <- tibble(m_formula,
+            models = map(m_formula, ~glmmTMB(data=m_data, formula=.x , family = poisson))) %>%
+  add_column(id=names(m_formula), .before=1)
+
+m_models <- m_models %>%
+  mutate(tidy_model = map(models, tidy),
+         AIC=map(models, AIC),
+         resids = map(models, residuals)) %>% unnest(cols=c(AIC)) %>%
+  mutate(resids = map(resids, as.numeric()),
+         normal_p = map(resids, ~shapiro.test(.x)$p.value)) %>%
+  unnest(cols=c(normal_p)) %>%
+  mutate(logLik=map(models, ~(logLik(.x)[1]))) %>%
+  mutate(r=map(models, ~r2(.x)[[1]])) %>% 
+  unnest(cols=c(logLik)) %>% arrange(AIC)
+
+m_mod <- glm(
+  num ~ gear,
+  family = poisson,
+  data = m_data)
+
+parameters(m_mod)
+glance(m_mod)
+summary(m_mod)
+
+check_residuals(m_mod)
+check_outliers(m_mod)
+check_overdispersion(m_mod)
+testUniformity(m_mod)
+r2(m_mod)
+
+ggboxplot(m_data, x = "gear", y = "num", add = "jitter")+mytheme+
+  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
+  labs(x="Gear", y="Survived")
+  # + ylim(0,175) + stat_compare_means(method = "wilcox", label.x = 1.5, label.y = 20)
 
 # Weight ---------------------------------------------------------------
 
 w_data <- read.csv("./data/bremen_biofouling_ratios.csv")
 
-w <- w_data %>% mutate(w = clean_wt_boat-weigh_boat)
+w <- w_data %>% mutate(w = clean_wt_boat-weigh_boat,date=as.factor(date), 
+                       loc=as.factor(location), gear=as.factor(gear)) %>% mutate(log_w=log(w))
 
 ggboxplot(w, x = "location", y = "w", color="gear", add = "jitter")+facet_wrap(~date)
+ggboxplot(w, x = "location", y = "w", add = "jitter")+facet_wrap(~date)
+ggboxplot(w, x = "gear", y = "w", add = "jitter")+facet_wrap(~date)
 ggboxplot(w, x = "gear", y = "w", color="location", add = "jitter")+facet_wrap(~date)
 
+var_fac = c("date", "loc", "gear")
+coll_fac(data = w,predictors=var_fac)
+relat_single(data = w,response = "w", predictors = var_fac) 
+distr_response(data = w, response="w") 
+
+w1 <- glmmTMB(w ~ gear*loc*date, data = w)
+w2 <- glmmTMB(w ~ gear*date+loc, data = w)
+w3 <- glmmTMB(w ~ gear*date+loc, data = w, family="tweedie")
+w4 <- glmmTMB(w ~ gear*date+loc, data = w, family="lognormal")
+w5 <- lm(log_w ~gear*date+loc, data = w)
+
+compare_performance(w1, w2, w3,w5,metrics = c("AIC", "AICc", "BIC", "RMSE"))
+anova(w1, w2, w3)
+anova(w3, w4, w5)
+
+testUniformity(w5)
+testResiduals(w5)
+plot(simulateResiduals(w3))
+check_residuals(w5) # or testResiduals(w2)
+check_model(w5)
+r2(w5)
+emmip(w5, gear~loc)
+emmip(w5, loc~gear)
+
+tidy(w5)
+joint_tests(w5)
+tidy_avg_comparisons(w5)
 
 # Condition Index ---------------------------------------------------------------
 
