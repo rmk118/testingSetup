@@ -10,10 +10,12 @@ library(Hmisc)
 library(ggstatsplot)
 library(easystats)
 
+source("Linear modelling workflow_support functions.R") 
+
 # Temp and Salinity -------------------------------------------------------
 
 hobo <- read.csv("./data/hobo.csv") %>% 
-  mutate(dt=mdy_hms(Date.time), temp=Temp, sal=High.sal,loc=Location,.keep="unused")
+  mutate(date=mdy_hms(Date.time), temp=Temp, sal=High.sal,loc=Location,.keep="unused")
 
 noAir <- hobo %>% filter(sal>5)
 
@@ -21,20 +23,20 @@ noAir <- hobo %>% filter(sal>5)
 Inside<- noAir %>% filter(loc=="Inside") %>% dplyr::rename(sal_in = sal, temp_in=temp)
 Outside<-noAir %>% filter(loc=="Outside")%>% dplyr::rename(sal_out = sal, temp_out=temp)
 
-common <- inner_join(Inside, Outside, by="dt") %>% 
+common <- inner_join(Inside, Outside, by="date") %>% 
   select(-c("loc.x", "loc.y")) %>% 
   mutate(sal_diff = sal_in - sal_out, temp_diff=temp_in-temp_out)
 
-# ggplot(common, aes(x=dt, y=sal_diff))+geom_line()
-# ggplot(noAir, aes(x=dt, y=sal, color=loc))+geom_line()
- ggplot(hobo, aes(x=dt, y=sal, color=loc))+geom_line()+
+# ggplot(common, aes(x=date, y=sal_diff))+geom_line()
+# ggplot(noAir, aes(x=date, y=sal, color=loc))+geom_line()
+ ggplot(hobo, aes(x=date, y=sal, color=loc))+geom_line()+
    theme_classic()+ labs(x = NULL, y = "Salinity", color="Location") +
    scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])
 # ggboxplot(hobo, x = "loc", y = "sal", ylab = "Salinity", xlab = "Locations", add = "jitter")
 # 
-# ggplot(common, aes(x=dt, y=temp_diff))+geom_line()
-# ggplot(noAir, aes(x=dt, y=temp, color=loc))+geom_line()+theme_bw()
-# ggplot(hobo, aes(x=dt, y=temp, color=loc))+geom_line()+theme_bw()
+# ggplot(common, aes(x=date, y=temp_diff))+geom_line()
+# ggplot(noAir, aes(x=date, y=temp, color=loc))+geom_line()+theme_bw()
+# ggplot(hobo, aes(x=date, y=temp, color=loc))+geom_line()+theme_bw()
 # ggboxplot(hobo, x = "loc", y = "temp", ylab = "Temp", xlab = "Locations", add = "jitter")
 
 common_roll <- common %>%
@@ -43,9 +45,9 @@ common_roll <- common %>%
 noAir_roll <- noAir %>% group_by(loc) %>% 
   mutate(across(where(is.double), \(x) rollmean(x, k = 24, fill = NA))) %>% na.omit()
 
-ggplot(common_roll, aes(x=dt, y=sal_diff))+geom_line()
+ggplot(common_roll, aes(x=date, y=sal_diff))+geom_line()
 
-sal_plot <- ggplot(noAir_roll, aes(x=dt, y=sal, color=loc))+
+sal_plot <- ggplot(noAir_roll, aes(x=date, y=sal, color=loc))+
   geom_line()+
   theme_classic()+ labs(x = NULL, y = "Salinity", color="Location") +
   scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
@@ -53,7 +55,7 @@ sal_plot <- ggplot(noAir_roll, aes(x=dt, y=sal, color=loc))+
 
 
 
-temp_plot <-ggplot(noAir_roll, aes(x=dt, y=temp, color=loc))+
+temp_plot <-ggplot(noAir_roll, aes(x=date, y=temp, color=loc))+
   geom_line()+
   theme_classic()+
   scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
@@ -64,7 +66,7 @@ temp_plot <-ggplot(noAir_roll, aes(x=dt, y=temp, color=loc))+
 # Turbidity -------------------------------------------------------
 
 t_data <- read.csv("./data/turbidity.csv") %>% 
-  mutate(date=mdy(Date), loc=as.factor(Location),turbidity=Turbidity,.keep="unused")
+  mutate(date=mdy(date), loc=as.factor(location),.keep="unused")
 
 t <- t_data %>% group_by(date, loc) %>% summarise(mean=mean(turbidity), sd=sd(turbidity))
 
@@ -105,7 +107,7 @@ chl_plot <-ggplot(data=chl)+
 SPM_data <- read.csv("./data/SPM_data.csv")
 
 #Finding the TPM and POM from dry and ashed weights
-SPM <- SPM_data %>% mutate(TPM_mg = Dry_wt-Filter_wt, POM_mg = Dry_wt-Ashed_wt, Date=mdy(Date))
+SPM <- SPM_data %>% mutate(TPM_mg = Dry_wt-Filter_wt, POM_mg = Dry_wt-Ashed_wt, date=mdy(Date))
 
 # Separate and average for formate Blank TPM & POM
 
@@ -114,19 +116,19 @@ blank_df <- SPM %>%
 
 true_blank_df <- SPM %>%
   filter(Type == 'True Blank') %>%
-  group_by(Date) %>%
+  group_by(date) %>%
   dplyr::summarize(TB_TPM = mean(TPM_mg, na.rm = TRUE),
             TB_POM =mean(POM_mg, na.rm = TRUE))
 
 formate_blank_df <- SPM %>%
   filter(Type == 'Formate Blank') %>%
-  group_by(Date) %>%
+  group_by(date) %>%
   dplyr::summarize(FB_TPM = mean(TPM_mg, na.rm = TRUE),
             FB_POM =mean(POM_mg, na.rm = TRUE))
 
 SPM <- SPM %>%
-  left_join(formate_blank_df, by='Date') %>%
-  left_join(true_blank_df, by='Date')
+  left_join(formate_blank_df, by='date') %>%
+  left_join(true_blank_df, by='date')
 
 # Solve for blank corrected values including PIM
 SPM <- SPM %>%
@@ -154,23 +156,24 @@ SPM <- SPM %>%
 
 SPM_final_data <- SPM %>% 
   filter(Type %in% c("Inside", "Outside")) %>% 
-  select(Date, Type, TPM_TOTAL_mg, POM_TOTAL_mg, PIM_TOTAL_mg, TPM_mg_ml, POM_mg_ml, PIM_mg_ml)
+  select(date, Type, TPM_TOTAL_mg, POM_TOTAL_mg, PIM_TOTAL_mg, TPM_mg_ml, POM_mg_ml, PIM_mg_ml)
 
 SPM_final <- SPM_final_data %>%
-  group_by(Date, Type) %>%
-  summarise(Ave_TOT_TPM_mg = mean(TPM_TOTAL_mg), 
+  group_by(date, Type) %>%
+  summarise(#Ave_TOT_TPM_mg = mean(TPM_TOTAL_mg), 
             #TOT_TPM_SE = std.error(TPM_TOTAL_mg),
-            TOT_TPM_SD = sd(TPM_TOTAL_mg),
-            Ave_TOT_POM_mg = mean(POM_TOTAL_mg), 
-            TOT_POM_SD = sd(POM_TOTAL_mg),
-            Ave_TOT_PIM_mg = mean(PIM_TOTAL_mg), 
-            TOT_PIM_SD = sd(PIM_TOTAL_mg),
+           # TOT_TPM_SD = sd(TPM_TOTAL_mg),
+           # Ave_TOT_POM_mg = mean(POM_TOTAL_mg), 
+           # TOT_POM_SD = sd(POM_TOTAL_mg),
+          #  Ave_TOT_PIM_mg = mean(PIM_TOTAL_mg), 
+           # TOT_PIM_SD = sd(PIM_TOTAL_mg),
             TPM_mg_L = mean(TPM_mg_ml*1000), 
             TPM_mg_L_SD = sd(TPM_mg_ml*1000),
             POM_mg_L = mean(POM_mg_ml*1000), 
             POM_mg_L_SD = sd(POM_mg_ml*1000),
-            PIM_mg_L = mean(PIM_mg_ml*1000), 
-            PIM_mg_L_SD = sd(PIM_mg_ml*1000))
+            PIM_mg_L = mean(PIM_mg_ml*1000),
+            PIM_mg_L_SD = sd(PIM_mg_ml*1000)) %>% 
+  dplyr::rename(loc=Type)
 
 # Theme for creating extra classy gg plots
 mytheme <- theme_classic()+theme(legend.position = "bottom",
@@ -178,28 +181,28 @@ mytheme <- theme_classic()+theme(legend.position = "bottom",
                  axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)))
 
 TPM_mg_L <- ggplot(SPM_final) +
-  geom_point(aes(x = Date, y = TPM_mg_L, colour = Type)) +
-  geom_errorbar(aes(x = Date, ymin = TPM_mg_L-TPM_mg_L_SD, ymax = TPM_mg_L+TPM_mg_L_SD, color = Type),
+  geom_point(aes(x = date, y = TPM_mg_L, colour = loc)) +
+  geom_errorbar(aes(x = date, ymin = TPM_mg_L-TPM_mg_L_SD, ymax = TPM_mg_L+TPM_mg_L_SD, color = loc),
                 width = 0.2) +
-  geom_line(aes(x = Date, y = TPM_mg_L, colour = Type, group = Type)) +
+  geom_line(aes(x = date, y = TPM_mg_L, colour = loc, group = loc)) +
   ylab("TPM (mg/L)") + labs(x=NULL, color="Location") +
   scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+ 
   mytheme
 
 POM_mg_L <- ggplot(SPM_final) +
-  geom_point(aes(x = Date, y = POM_mg_L, colour = Type)) +
-  geom_errorbar(aes(x = Date, ymin = POM_mg_L-POM_mg_L_SD, ymax = POM_mg_L+POM_mg_L_SD, color = Type),
+  geom_point(aes(x = date, y = POM_mg_L, colour = loc)) +
+  geom_errorbar(aes(x = date, ymin = POM_mg_L-POM_mg_L_SD, ymax = POM_mg_L+POM_mg_L_SD, color = loc),
                 width = 0.2) +
-  geom_line(aes(x = Date, y = POM_mg_L, colour = Type, group = Type)) +
+  geom_line(aes(x = date, y = POM_mg_L, colour = loc, group = loc)) +
   ylab("POM (mg/L)") + labs(x=NULL, color="Location") +
   scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
   mytheme
 
 PIM_mg_L <- ggplot(SPM_final) +
-  geom_point(aes(x = Date, y = PIM_mg_L, colour = Type)) +
-  geom_errorbar(aes(x = Date, ymin = PIM_mg_L-PIM_mg_L_SD, ymax = PIM_mg_L+PIM_mg_L_SD, color = Type),
+  geom_point(aes(x = date, y = PIM_mg_L, colour = loc)) +
+  geom_errorbar(aes(x = date, ymin = PIM_mg_L-PIM_mg_L_SD, ymax = PIM_mg_L+PIM_mg_L_SD, color = loc),
                 width = 0.2) +
-  geom_line(aes(x = Date, y = PIM_mg_L, colour = Type, group = Type)) +
+  geom_line(aes(x = date, y = PIM_mg_L, colour = loc, group = loc)) +
   ylab("PIM (mg/L)") + labs(x=NULL, color="Location") +
   scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
   mytheme 
@@ -283,11 +286,11 @@ ggplot(data=cleaned_accel_temp, aes(x = date, y = temp, color=loc))+
 ib_temp <- cleaned_accel_temp %>% filter(trt=="ib")
 ggplot()+
   geom_line(data=ib_temp, aes(x=date, y=temp), color="turquoise")+
-  geom_line(data=noAir %>% filter(loc=="Inside"), aes(x=dt, y=temp))+theme_classic()
+  geom_line(data=noAir %>% filter(loc=="Inside"), aes(x=date, y=temp))+theme_classic()
 
 
-oc_hobo <- hobo %>% filter(loc=="Outside", dt > ymd_hms("2022-09-12 14:00:00")) %>% 
-  mutate(date=round_date(dt, unit = "second"), trt="hobo") %>% select(-c(dt, sal)) 
+oc_hobo <- hobo %>% filter(loc=="Outside", date > ymd_hms("2022-09-12 14:00:00")) %>% 
+  mutate(date=round_date(date, unit = "second"), trt="hobo") %>% select(-c(date, sal)) 
 
 oc_seahorse <- cleaned_accel_temp %>% filter(loc=="Outside") %>% 
   mutate(date=round_date(date, unit = "hour")) %>% group_by(date) %>% 
@@ -298,8 +301,8 @@ oc_validation <- bind_rows(oc_hobo, oc_seahorse) %>% mutate(loc="Outside")
 ggplot()+
   geom_line(data=oc_validation, aes(x=date, y=temp, color=trt))
 
-ic_hobo <- hobo %>% filter(loc=="Inside", dt > ymd_hms("2022-09-12 14:00:00")) %>% 
-  mutate(date=round_date(dt, unit = "second"), trt="hobo") %>% select(-c(dt, sal)) 
+ic_hobo <- hobo %>% filter(loc=="Inside", date > ymd_hms("2022-09-12 14:00:00")) %>% 
+  mutate(date=round_date(date, unit = "second"), trt="hobo") %>% select(-c(date, sal)) 
 
 ic_seahorse <- cleaned_accel_temp %>% 
   filter(trt=="ic", period=="oct") %>%
@@ -586,135 +589,64 @@ corrplot(M2,
 
 # Env correlations --------------------------------------------------------
 
-hobo_weekly <- noAir %>%
-  mutate(date = floor_date(dt, unit="week")) %>% 
-  group_by(date, loc) %>% 
-  summarise(temp = mean(temp), sal = mean(sal))
+add_sample <- function(df) {
+  df %>% mutate(sample = case_when(
+    date %in% as_date(c("2022-06-14"))~1,
+    date %in% as_date(c("2022-06-22", "2022-06-29", "2022_07-05","2022-07-06"))~2,
+    date %in% as_date(c("2022-07-12","2022-07-19","2022-07-26","2022-07-27"))~3,
+    date %in% as_date(c("2022-08-02","2022-08-10","2022-08-15","2022-08-16"))~4,
+    date %in% as_date(c("2022-09-13","2022-09-15"))~5,
+    date %in% as_date(c("2022-09-28", "2022-10-17"))~6
+  ))
+}
 
-t_weekly <- t_data %>%
-  mutate(date = floor_date(date, unit="week")) %>% 
-  group_by(date, loc) %>% 
-  summarise(turbidity = mean(turbidity))
+t_match <- t_data %>%
+  add_sample %>% 
+  group_by(sample, loc) %>% 
+  summarise(turbidity = mean(turbidity)) %>% ungroup()
 
-g_weekly <- g_data %>% 
-  mutate(date = floor_date(date, unit="week"), loc=location) %>% 
-  group_by(date, loc, gear) %>% 
-  summarise(across(all_of(g_cols), mean)) %>% 
-  mutate(loc = if_else(loc=="in", "Inside", "Outside"))
+chl_match <- chlA %>% 
+  add_sample %>% 
+  group_by(sample, loc) %>%
+  summarise(chl = mean(chl)) %>% ungroup()
 
-chl_weekly <- chlA %>% 
-  mutate(date = floor_date(date, unit="week")) %>% 
+SPM_match <- SPM_final_data %>%
+  select(!contains("TOTAL")) %>%
+  dplyr::rename(loc=Type) %>% 
+  add_sample %>% 
   group_by(date, loc) %>%
-  summarise(chl = mean(chl))
-
-SPM_weekly <- SPM_final_data %>%
-  mutate(date = floor_date(Date, unit="week"), loc = Type, .keep="unused") %>% 
-  group_by(date, loc) %>%
-  summarise(across(where(is.double),mean))
+  summarise(across(where(is.double),mean)) %>% ungroup()
 
 
-ggplot(hobo_weekly, aes(x=date, y=temp, color=loc))+
-  geom_line()+
-  theme_classic()+
-  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
-  labs(x=NULL,y="Temperature (°C)", color="Location")
 
-ggplot(t_weekly, aes(x=date, y=turbidity, color=loc))+
-  geom_line()+
-  theme_classic()+
-  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
-  labs(x=NULL,y="Turbidity", color="Location")
+t %>% 
+  dplyr::rename(turb=mean) %>% 
+  select(-sd) %>% 
+  full_join(chl %>% select(-sd) %>% dplyr::rename(chl=mean), by=c("date", "loc")) %>% 
+  full_join(SPM_final %>% select(!contains("SD"))) %>% 
+  ungroup() %>% select(-date) %>% 
+  correlation(method="spearman")
 
 
-all_weekly <- hobo_weekly %>% 
-  full_join(chl_weekly, by=c("date", "loc")) %>% 
-  full_join(SPM_weekly, by=c("date", "loc")) %>% 
-  full_join(t_weekly, by=c("date", "loc"))
-  #full_join(g_weekly, by=c("date", "loc"))
+temp_match <- noAir %>% mutate(
+  sample = case_when(
+    date >= as_datetime("2022-06-08 19:00:00") & date <= as_datetime("2022-06-14 23:00:00")~1,
+    date >= as_datetime("2022-06-15 0:00:00") & date <= as_datetime("2022-07-06 23:00:00")~2,
+    date >= as_datetime("2022-07-07 0:00:00") & date <= as_datetime("2022-07-27 23:00:00")~3,
+    date >= as_datetime("2022-07-28 0:00:00") & date <= as_datetime("2022-08-16 23:00:00")~4,
+    date >= as_datetime("2022-08-17 0:00:00") & date <= as_datetime("2022-09-15 23:00:00")~5,
+    date >= as_datetime("2022-09-16 0:00:00") & date <= as_datetime("2022-10-17 23:00:00")~6,
+  )) %>% group_by(sample, loc) %>% summarise(temp=mean(temp))
 
 
-hobo_monthly <- noAir %>%
-  mutate(date = floor_date(dt, unit="month")) %>% 
-  group_by(date, loc) %>% 
-  summarise(temp = mean(temp), sal = mean(sal))
+all_env <- t_match %>% 
+  full_join(chl_match) %>% 
+  full_join(SPM_match) %>% 
+  full_join(temp_match) %>% 
+  select(turbidity, chl, TPM_mg_ml, POM_mg_ml, PIM_mg_ml,temp, loc, sample) %>% 
+  mutate(location=if_else(loc=="Inside", "in", "out"))
 
-t_monthly <- t_data %>%
-  mutate(date = floor_date(date, unit="month")) %>% 
-  group_by(date, loc) %>% 
-  summarise(turbidity = mean(turbidity))
+# %>% 
+ #correlation(method="spearman")
 
-g_monthly <- g_data %>% 
-  mutate(date = floor_date(date, unit="month"), loc=location) %>% 
-  group_by(date, loc, gear) %>% 
-  summarise(across(all_of(g_cols), mean)) %>% 
-  mutate(loc = if_else(loc=="in", "Inside", "Outside"))
-
-chl_monthly <- chlA %>% 
-  mutate(date = floor_date(date, unit="month")) %>% 
-  group_by(date, loc) %>%
-  summarise(chl = mean(chl))
-
-SPM_monthly <- SPM_final_data %>%
-  mutate(date = floor_date(Date, unit="month"), loc = Type, .keep="unused") %>% 
-  group_by(date, loc) %>%
-  summarise(across(where(is.double),mean))
-
-
-ggplot(hobo_monthly, aes(x=date, y=temp, color=loc))+
-  geom_line()+
-  theme_classic()+
-  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
-  labs(x=NULL,y="Temperature (°C)", color="Location")
-
-ggplot(t_monthly, aes(x=date, y=turbidity, color=loc))+
-  geom_line()+
-  theme_classic()+
-  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
-  labs(x=NULL,y="Turbidity", color="Location")
-
-
-all_monthly <- hobo_monthly %>% 
-  full_join(chl_monthly, by=c("date", "loc")) %>% 
-  full_join(SPM_monthly, by=c("date", "loc")) %>% 
-  full_join(t_monthly, by=c("date", "loc"))
-
-all_monthly <- all_monthly %>% right_join(g_monthly)
-
-M3 <- split(all_monthly, ~gear+loc)
-M3 <- map(M3, \(x) x %>% 
-            ungroup() %>% 
-            select(where(is.double)) %>% 
-            select(-date) %>% 
-            select(-ends_with("mg")) %>% 
-            as.matrix())
-
-M3 <- map(M3, \(x) rcorr(x))
-
-# Plot all pictures
-par(mfrow=c(2,3))
-
-lapply(M3, function(x) {
-  corrplot(x$r,tl.col="black", tl.cex=0.7,tl.srt=45, p.mat = x$P, insig = "blank")})
-
-corrplot(M3$BP.Inside$r, diag = FALSE, type="lower", p.mat = M3$BP.Inside$P, insig = "blank")
-
-par(mfrow=c(2,3))
-lapply(M3, \(x) function(x) {
-  ggcorr(x,label=TRUE, label_round=2)})
-
-corrplot(all_monthly %>% 
-         select(-date) %>% 
-         select(-ends_with("mg")),label=TRUE, label_round=2)+facet_grid(loc~gear)
-
-par(mfrow=c(2,3))
-monthly_nested <- all_monthly %>% 
-  ungroup() %>% 
-  select(-date) %>% 
-  select(-ends_with("mg")) %>% group_by(loc, gear) %>% nest()
-
-
-m<-monthly_nested %>% rowwise() %>% mutate(corrR = list(rcorr(data %>% as.matrix())$r),
-                                           corrP = list(rcorr(data %>% as.matrix())$P))
-
-par(mfrow=c(2,3))
-pwalk(list(m$corrR, m$corrP,m$loc, m$gear), \(x, y, z, a) corrplot(x, type="lower", diag = FALSE, p.mat = y, insig = "blank", title = paste(z, a)))
+df <- g_data %>% add_sample %>% left_join(all_env, by=c("location", "sample"))

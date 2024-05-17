@@ -518,3 +518,138 @@ supp_gts
 #   tab_style(locations = cells_body(columns="term"),
 #             style = cell_text(transform = "capitalize")) %>% 
 #   cols_move_to_end(contains("value"))
+
+
+par(mfrow=c(2,3))
+lapply(M3, \(x) function(x) {
+  ggcorr(x,label=TRUE, label_round=2)})
+
+corrplot(all_monthly %>% ungroup() %>% 
+           select(-date) %>% 
+           select(-ends_with("mg")),label=TRUE, label_round=2)+facet_grid(loc~gear)
+
+par(mfrow=c(2,3))
+monthly_nested <- all_monthly %>% 
+  ungroup() %>% 
+  select(-date) %>% 
+  select(-ends_with("mg")) %>% group_by(loc, gear) %>% nest()
+
+
+m<-monthly_nested %>% rowwise() %>% mutate(corrR = list(rcorr(data %>% as.matrix())$r),
+                                           corrP = list(rcorr(data %>% as.matrix())$P))
+
+par(mfrow=c(2,3))
+pwalk(list(m$corrR, m$corrP,m$loc, m$gear), \(x, y, z, a) corrplot(x, type="lower", diag = FALSE, p.mat = y, insig = "blank", title = paste(z, a)))
+
+# Env correlations --------------------------------------------------------
+
+hobo_weekly <- noAir %>%
+  mutate(date = floor_date(dt, unit="week")) %>% 
+  group_by(date, loc) %>% 
+  summarise(temp = mean(temp), sal = mean(sal))
+
+t_weekly <- t_data %>%
+  mutate(date = floor_date(date, unit="week")) %>% 
+  group_by(date, loc) %>% 
+  summarise(turbidity = mean(turbidity))
+
+g_weekly <- g_data %>% 
+  mutate(date = floor_date(date, unit="week"), loc=location) %>% 
+  group_by(date, loc, gear) %>% 
+  summarise(across(all_of(g_cols), mean)) %>% 
+  mutate(loc = if_else(loc=="in", "Inside", "Outside"))
+
+chl_weekly <- chlA %>% 
+  mutate(date = floor_date(date, unit="week")) %>% 
+  group_by(date, loc) %>%
+  summarise(chl = mean(chl))
+
+SPM_weekly <- SPM_final_data %>%
+  mutate(date = floor_date(Date, unit="week"), loc = Type, .keep="unused") %>% 
+  group_by(date, loc) %>%
+  summarise(across(where(is.double),mean))
+
+
+ggplot(hobo_weekly, aes(x=date, y=temp, color=loc))+
+  geom_line()+
+  theme_classic()+
+  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
+  labs(x=NULL,y="Temperature (°C)", color="Location")
+
+ggplot(t_weekly, aes(x=date, y=turbidity, color=loc))+
+  geom_line()+
+  theme_classic()+
+  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
+  labs(x=NULL,y="Turbidity", color="Location")
+
+
+all_weekly <- hobo_weekly %>% 
+  full_join(chl_weekly, by=c("date", "loc")) %>% 
+  full_join(SPM_weekly, by=c("date", "loc")) %>% 
+  full_join(t_weekly, by=c("date", "loc"))
+#full_join(g_weekly, by=c("date", "loc"))
+
+
+hobo_monthly <- noAir %>%
+  mutate(date = floor_date(dt, unit="month")) %>% 
+  group_by(date, loc) %>% 
+  summarise(temp = mean(temp), sal = mean(sal))
+
+t_monthly <- t_data %>%
+  mutate(date = floor_date(date, unit="month")) %>% 
+  group_by(date, loc) %>% 
+  summarise(turbidity = mean(turbidity))
+
+g_monthly <- g_data %>% 
+  mutate(date = floor_date(date, unit="month"), loc=location) %>% 
+  group_by(date, loc, gear) %>% 
+  summarise(across(all_of(g_cols), mean)) %>% 
+  mutate(loc = if_else(loc=="in", "Inside", "Outside"))
+
+chl_monthly <- chlA %>% 
+  mutate(date = floor_date(date, unit="month")) %>% 
+  group_by(date, loc) %>%
+  summarise(chl = mean(chl))
+
+SPM_monthly <- SPM_final_data %>%
+  mutate(date = floor_date(Date, unit="month"), loc = Type, .keep="unused") %>% 
+  group_by(date, loc) %>%
+  summarise(across(where(is.double),mean))
+
+
+ggplot(hobo_monthly, aes(x=date, y=temp, color=loc))+
+  geom_line()+
+  theme_classic()+
+  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
+  labs(x=NULL,y="Temperature (°C)", color="Location")
+
+ggplot(t_monthly, aes(x=date, y=turbidity, color=loc))+
+  geom_line()+
+  theme_classic()+
+  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
+  labs(x=NULL,y="Turbidity", color="Location")
+
+
+all_monthly <- hobo_monthly %>% 
+  full_join(chl_monthly, by=c("date", "loc")) %>% 
+  full_join(SPM_monthly, by=c("date", "loc")) %>% 
+  full_join(t_monthly, by=c("date", "loc"))
+
+all_monthly <- all_monthly %>% right_join(g_monthly)
+
+M3 <- split(all_monthly, ~gear+loc)
+M3 <- map(M3, \(x) x %>% 
+            ungroup() %>% 
+            select(where(is.double)) %>% 
+            select(-date) %>% 
+            select(-ends_with("mg")) %>% 
+            as.matrix())
+
+M3 <- map(M3, \(x) rcorr(x))
+
+# Plot all picture
+
+corrplot(M3$BP.Inside$r, diag = FALSE, type="lower", p.mat = M3$BP.Inside$P, insig = "blank")
+
+
+sample_dates <- g_data %>% select(date) %>% distinct()

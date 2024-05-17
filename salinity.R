@@ -29,6 +29,11 @@ ggplot(hobo, aes(x=date, y=(temp*1.8+32), color=loc))+geom_line()+
   theme_classic()+ labs(x = NULL, y = "Temperature (°F)", color="Location") +
   scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])
 
+ggplot(data=hobo)+
+  geom_line(aes(x=date, y=sal, color=loc))+
+  geom_line(aes(x=date, y=temp, linetype=loc))+
+  theme_classic()+ labs(x = NULL, y = "Salinity", color="Location")
+
 # Tidal data from rtide package -------------------------------
 
 # tides<-tide_height("Thomaston", from = as.Date("2022-06-08"), to = as.Date("2022-10-17"),
@@ -37,18 +42,16 @@ ggplot(hobo, aes(x=date, y=(temp*1.8+32), color=loc))+geom_line()+
 tides<-tide_height("Fort Popham", from = as.Date("2022-06-08"), to = as.Date("2022-10-17"),
                    minutes = 60L, tz = "EST5EDT") 
 
-hobo <- tides %>% dplyr::rename(date = DateTime, tide=TideHeight) %>% select(-Station) %>% right_join(hobo)
+hobo_tides <- tides %>% dplyr::rename(date = DateTime, tide=TideHeight) %>% select(-Station) %>% right_join(hobo)
 
 hobo_roll <- tides %>% dplyr::rename(date = DateTime, tide=TideHeight) %>% select(-Station) %>% right_join(roll)
 
-correlation(hobo, method="spearman")
-correlation(hobo %>% group_by(loc), method="spearman")
+correlation(hobo_tides, method="spearman")
+correlation(hobo_tides %>% group_by(loc), method="spearman")
 
-noAir <- hobo %>% filter(sal>5)
-correlation(noAir, method="spearman")
-correlation(noAir %>% group_by(loc), method="spearman")
 
-ggplot(data = hobo %>% filter(loc=="Inside"), aes(x =date, y =tide)) +
+
+ggplot(data = hobo_tides %>% filter(loc=="Inside"), aes(x =date, y =tide)) +
   geom_line() +
   scale_x_datetime(
     name = "Date",
@@ -96,15 +99,55 @@ low_pm <- rp_data %>%
 rp_tides <- bind_rows(high_am, high_pm, low_am, low_pm) %>% 
   mutate(date=lubridate::round_date(time, unit="hour"), tide_rp=tide, .keep="unused")
 
+low_tides <- bind_rows(low_am, low_pm) %>% 
+  mutate(date=lubridate::round_date(time, unit="hour"), tide_low=tide, .keep="unused")
+
 ggplot()+
   geom_line(data=rp_tides, aes(x=date, y=tide_rp))
 
-rp_tides <- rp_tides %>% full_join(hobo) %>% na.omit()
+rp_tides <- rp_tides %>% full_join(hobo_tides) %>% na.omit()
+low_tides <- low_tides %>% full_join(hobo) %>% na.omit()
+
 correlation(rp_tides)
 
+low_tides %>% select(!date) %>% group_by(loc) %>% correlation(method="spearman")
+correlation(low_tides %>% select(!date),method= "spearman")
+
+plot(cor_test(low_tides, "tide_low", "sal"))
+
+ggplot(rp_tides, aes(x=date, y=sal, color=loc))+geom_line()+
+  theme_classic()
+
+no_extreme <- anti_join(hobo, rp_tides, by="date")
+
+ggplot(no_extreme, aes(x=date, y=sal, color=loc))+geom_line()+
+  theme_classic()
 
 # Newcastle weather -------------------------------------------------------
 
+newcastle_data <-  read.csv("./data/newcastle_weather.csv") %>% 
+  select(Date, Tavg, Prcp) %>% 
+  mutate(date = ymd(Date), prec = Prcp, temp=Tavg,.keep="unused")
 
+newcastle <- hobo %>% 
+  mutate(date=floor_date(date, unit="day")) %>% 
+  group_by(date, loc) %>% 
+  summarise(temp_hobo=mean(temp), sal=mean(sal)) %>% 
+  left_join(newcastle_data) %>% ungroup()
 
+newcastle_tides <- low_tides %>% 
+  mutate(date=floor_date(date, unit="day")) %>% 
+  group_by(date, loc) %>% 
+  summarise(temp_hobo=mean(temp), sal=mean(sal), tide_low=mean(tide_low)) %>% 
+  left_join(newcastle_data) %>% ungroup()
 
+correlation(newcastle %>% select(!date))
+correlation(newcastle_tides %>% select(!date))
+
+ggplot(data=hobo)+
+  geom_line(aes(x=date, y=sal/10, color=loc))+
+  #geom_line(aes(x=date, y=temp/10, color=loc))+
+  #geom_line(aes(x=date, y=temp, linetype=loc))+
+  geom_line(data=low_tides, aes(x=date, y=tide_low), color="gray")+
+  geom_line(data=newcastle, aes(x=date, y=prec))+
+  theme_classic()+ labs(x = NULL, y = "Salinity", color="Location")

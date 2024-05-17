@@ -1,4 +1,4 @@
-Date,Turbidity,Location
+date,turbidity,location
 6/14/22,0.98,Inside
 6/14/22,1.22,Inside
 6/14/22,1.06,Inside
@@ -109,6 +109,16 @@ Date,Turbidity,Location
 9/28/22,4.58,Outside
 9/28/22,7.08,Outside
 9/28/22,4.15,Outside
+9/15/22,5.91,Inside
+9/15/22,6.06,Inside
+9/15/22,5.57,Inside
+9/15/22,5.12,Inside
+9/15/22,6.43,Inside
+9/15/22,3.29,Outside
+9/15/22,2.75,Outside
+9/15/22,3.50,Outside
+9/15/22,3.00,Outside
+9/15/22,3.27,Outside
 10/17/22,2.65,Inside
 10/17/22,1.93,Inside
 10/17/22,1.99,Inside
