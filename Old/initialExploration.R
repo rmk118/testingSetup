@@ -459,3 +459,62 @@ em
 # summary(regrid(emm.src), infer = TRUE)
 # 
 # plot(emm.src)
+
+
+#pairs(emmeans(mod2, "gear", by="loc", type="response"), reverse = "true", adjust="bonferroni")
+
+create_supp_gt <- function(mod, variable, by=TRUE) {
+  avg_comparisons(mod, vcov=vcov(mod2), variables=variable, by=by, p_adjust = "bonferroni") %>% 
+    select(any_of(c("term", "contrast", "date", "gear", "loc", "estimate", "std.error", 
+                    "statistic","p.value", "conf.low", "conf.high"))) %>% 
+    dplyr::rename(any_of(names)) %>% 
+    gt() %>% 
+    fmt_number(decimals =4) %>% 
+    sub_small_vals(threshold = 0.001) %>% 
+    tab_style(locations = cells_column_labels(columns=any_of(c("term", "contrast", "date", "gear", "loc", "estimate", "statistic", "conf.low", "conf.high"))),
+              style = cell_text(transform = "capitalize")) %>% 
+    tab_style(locations = cells_body(columns="term"),
+              style = cell_text(transform = "capitalize"))
+}
+
+
+#Supplementary tables
+s1 <- create_supp_gt(mod=mod2, variable=list(gear="pairwise")) #gear, across all locations and dates
+s2 <- create_supp_gt(mod=mod2,variable=list(loc="pairwise")) #location, across all gears and dates
+s3 <- create_supp_gt(mod=mod2,variable=list("gear"="pairwise"), by="loc") #gear contrasts by location, across dates
+s4 <- create_supp_gt(mod=mod2,variable=list("loc"="pairwise"), by="gear") #location contrasts by gear, across dates
+s5 <- create_supp_gt(mod=mod2,variable=list("gear"="pairwise"), by=c("date", "loc")) #gear contrasts for each date and location
+
+
+supp_gts <- gt_group(s1, s2, s3, s4, s5)
+supp_gts
+
+# create_supp_tab1 <- function(mod, variable, by=NULL) {
+#   
+#   pairs(emmeans(mod, specs=variable, by=by, type="response"), reverse = "true", adjust="bonferroni") %>% 
+#     tidy() %>% 
+#     mutate(across(any_of(c("adj.p.value","p.value")), ~if_else(.x==0, 1e-10, .x))) %>% 
+#     select(any_of(c("term", "contrast", "date", "gear", "loc", "odds.ratio", "estimate", "std.error", "statistic", "conf.low", "conf.high", "z.ratio", "p.value", "adj.p.value"))) %>% 
+#     dplyr::rename(any_of(names))
+# }
+# 
+# 
+# s1c <- create_supp_tab1(mod=mod2,"gear") #gear, across all locations and dates
+# s2c <- create_supp_tab1(mod=mod2,"loc") #location, across all gears and dates
+# 
+# s3c <- create_supp_tab1(mod=mod2,"gear", by="date") #gear contrasts by date, across locations
+# s4c <- create_supp_tab1(mod=mod2,"gear", by="loc") #gear contrasts by location, across dates
+# s5c <- create_supp_tab1(mod=mod2,"loc", by="gear") #location contrasts by gear, across dates
+# s6c <- create_supp_tab1(mod=mod2,"gear", by=c("date", "loc")) #gear contrasts for each date and location
+# 
+# 
+# supp_tabs1 <- bind_rows(s1c, s2c, s3c, s4c, s5c, s6c, .id="id")
+# supp_tabs1  %>% 
+#   gt() %>% 
+#   fmt_number(decimals =3) %>% 
+#   sub_small_vals(threshold = 0.001) %>% 
+#   tab_style(locations = cells_column_labels(columns=any_of(c("term", "contrast", "date", "gear", "estimate", "statistic", "conf.low", "conf.high"))),
+#             style = cell_text(transform = "capitalize")) %>% 
+#   tab_style(locations = cells_body(columns="term"),
+#             style = cell_text(transform = "capitalize")) %>% 
+#   cols_move_to_end(contains("value"))

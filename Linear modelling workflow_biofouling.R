@@ -114,18 +114,18 @@ mod <- glmmTMB(prop_fouling ~ date*gear*loc,
 #   no_gear = prop_fouling~loc*date,
 #   no_loc2=prop_fouling~gear*date+gear:loc+gear:loc:date)
 # 
-# beta_models <- tibble(beta_formula, 
+# beta_models <- tibble(beta_formula,
 #             models = map(beta_formula, ~glmmTMB(data=df, formula=.x , family = beta_family()))) %>%
 #   add_column(id=names(beta_formula), .before=1)
 # 
-# beta_models <- beta_models %>% 
+# beta_models <- beta_models %>%
 #   mutate(tidy_model = map(models, tidy),
 #          AIC=map(models, AIC),
 #          resids = map(models, residuals)) %>% unnest(cols=c(AIC)) %>%
 #   mutate(resids = map(resids, as.numeric()),
 #          normal_p = map(resids, ~shapiro.test(.x)$p.value)) %>%
 #   unnest(cols=c(normal_p)) %>%
-#   mutate(logLik=map(models, ~(logLik(.x)[1]))) %>% 
+#   mutate(logLik=map(models, ~(logLik(.x)[1]))) %>%
 #   unnest(cols=c(logLik)) %>% arrange(AIC)
 
 # The full model (including all interaction terms) had the lowest AIC and highest logLik
@@ -144,7 +144,7 @@ disp_formula <- list(
 disp_models <- tibble(disp_formula,
                       models = map(disp_formula,
                                    ~glmmTMB(data=df, 
-                                            formula= prop_fouling ~ date*gear*loc, 
+                                            formula= prop_fouling ~ date*gear*loc,
                                             dispformula=.x, 
                                             family = beta_family()))) %>% 
   add_column(id=names(disp_formula), .before=1)
@@ -228,67 +228,11 @@ summary(mod2)
 joint_tests(mod2)
 r2_efron(mod2)
 
-#pairs(emmeans(mod2, "gear", by="loc", type="response"), reverse = "true", adjust="bonferroni")
+#Post-hoc contrasts
+create_supp_gt(mod2)
 
 
-names <- c("Location" = "loc", "SE" = "std.error", "P-value" = "p.value", "P-value adj."="adj.p.value", "P-value adj."="p.value.adj", "Odds ratio"="odds.ratio")
-
-create_supp_tab <- function(variable, by=TRUE) {
-  avg_comparisons(mod2, vcov=vcov(mod2), variables=variable, by=by, p_adjust = "bonferroni") %>% 
-    select(any_of(c("term", "contrast", "date", "gear", "loc", "estimate", "std.error", 
-                    "statistic","p.value", "conf.low", "conf.high"))) %>% 
-    dplyr::rename(any_of(names)) %>% 
-   gt() %>% 
-   fmt_number(decimals =4) %>% 
-    sub_small_vals(threshold = 0.001) %>% 
-    tab_style(locations = cells_column_labels(columns=any_of(c("term", "contrast", "date", "gear", "loc", "estimate", "statistic", "conf.low", "conf.high"))),
-              style = cell_text(transform = "capitalize")) %>% 
-    tab_style(locations = cells_body(columns="term"),
-              style = cell_text(transform = "capitalize"))
-}
 
 
-#Supplementary tables
-s1 <- create_supp_tab(variable=list(gear="pairwise")) #gear, across all locations and dates
-s2 <- create_supp_tab(variable=list(loc="pairwise")) #location, across all gears and dates
-
-s3 <- create_supp_tab(variable=list("gear"="pairwise"), by="date") #gear contrasts by date, across locations
-s4 <- create_supp_tab(variable=list("gear"="pairwise"), by="loc") #gear contrasts by location, across dates
-s5 <- create_supp_tab(variable=list("loc"="pairwise"), by="gear") #location contrasts by gear, across dates
-s6 <- create_supp_tab(variable=list("gear"="pairwise"), by=c("date", "loc")) #gear contrasts for each date and location
 
 
-supp_tabs <- gt_group(s1, s2, s3, s4, s5, s6)
-supp_tabs
-
-
-create_supp_tab2 <- function(variable, by=NULL) {
-  
-  pairs(emmeans(mod2, specs=variable, by=by, type="response"), reverse = "true", adjust="bonferroni") %>% 
-    tidy() %>% 
-    mutate(across(any_of(c("adj.p.value","p.value")), ~if_else(.x==0, 1e-10, .x))) %>% 
-    select(any_of(c("term", "contrast", "date", "gear", "loc", "odds.ratio", "estimate", "std.error", "statistic", "conf.low", "conf.high", "z.ratio", "p.value", "adj.p.value"))) %>% 
-    dplyr::rename(any_of(names)) %>% 
-    gt() %>% 
-    fmt_number(decimals =3) %>% 
-    sub_small_vals(threshold = 0.001) %>% 
-    tab_style(locations = cells_column_labels(columns=any_of(c("term", "contrast", "date", "gear", "estimate", "statistic", "conf.low", "conf.high"))),
-              style = cell_text(transform = "capitalize")) %>% 
-    tab_style(locations = cells_body(columns="term"),
-              style = cell_text(transform = "capitalize")) %>% 
-    cols_move_to_end(contains("value"))
-}
-
-
-#Supplementary tables
-s1b <- create_supp_tab2("gear") #gear, across all locations and dates
-s2b <- create_supp_tab2("loc") #location, across all gears and dates
-
-s3b <- create_supp_tab2("gear", by="date") #gear contrasts by date, across locations
-s4b <- create_supp_tab2("gear", by="loc") #gear contrasts by location, across dates
-s5b <- create_supp_tab2("loc", by="gear") #location contrasts by gear, across dates
-s6b <- create_supp_tab2("gear", by=c("date", "loc")) #gear contrasts for each date and location
-
-
-supp_tabs_b <- gt_group(s1b, s2b, s3b, s4b, s5b, s6b)
-supp_tabs_b 

@@ -8,6 +8,7 @@ library(corrplot)
 library(GGally)
 library(Hmisc)
 library(ggstatsplot)
+library(easystats)
 
 # Temp and Salinity -------------------------------------------------------
 
@@ -17,8 +18,8 @@ hobo <- read.csv("./data/hobo.csv") %>%
 noAir <- hobo %>% filter(sal>5)
 
 #Find hours when both sensors logged with no issues
-Inside<- noAir %>% filter(loc=="Inside") %>% rename(sal_in = sal, temp_in=temp)
-Outside<-noAir %>% filter(loc=="Outside")%>% rename(sal_out = sal, temp_out=temp)
+Inside<- noAir %>% filter(loc=="Inside") %>% dplyr::rename(sal_in = sal, temp_in=temp)
+Outside<-noAir %>% filter(loc=="Outside")%>% dplyr::rename(sal_out = sal, temp_out=temp)
 
 common <- inner_join(Inside, Outside, by="dt") %>% 
   select(-c("loc.x", "loc.y")) %>% 
@@ -114,13 +115,13 @@ blank_df <- SPM %>%
 true_blank_df <- SPM %>%
   filter(Type == 'True Blank') %>%
   group_by(Date) %>%
-  summarize(TB_TPM = mean(TPM_mg, na.rm = TRUE),
+  dplyr::summarize(TB_TPM = mean(TPM_mg, na.rm = TRUE),
             TB_POM =mean(POM_mg, na.rm = TRUE))
 
 formate_blank_df <- SPM %>%
   filter(Type == 'Formate Blank') %>%
   group_by(Date) %>%
-  summarize(FB_TPM = mean(TPM_mg, na.rm = TRUE),
+  dplyr::summarize(FB_TPM = mean(TPM_mg, na.rm = TRUE),
             FB_POM =mean(POM_mg, na.rm = TRUE))
 
 SPM <- SPM %>%
@@ -373,15 +374,17 @@ m_mod <- glm(
 parameters(m_mod)
 glance(m_mod)
 summary(m_mod)
+Anova(m_mod)
+emmeans(m_mod, pairwise~gear, type="response")
 
 check_residuals(m_mod)
 check_outliers(m_mod)
 check_overdispersion(m_mod)
 testUniformity(m_mod)
 r2(m_mod)
+r2_efron(m_mod)
 
 ggboxplot(m_data, x = "gear", y = "num", add = "jitter")+mytheme+
-  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
   labs(x="Gear", y="Survived")
   # + ylim(0,175) + stat_compare_means(method = "wilcox", label.x = 1.5, label.y = 20)
 
@@ -418,12 +421,15 @@ plot(simulateResiduals(w3))
 check_residuals(w5) # or testResiduals(w2)
 check_model(w5)
 r2(w5)
+r2_efron(w5)
 emmip(w5, gear~loc)
 emmip(w5, loc~gear)
+Anova(w5)
 
 tidy(w5)
 joint_tests(w5)
 tidy_avg_comparisons(w5)
+create_supp_gt(w5)
 
 # Condition Index ---------------------------------------------------------------
 
@@ -431,10 +437,43 @@ ci_data <- read.csv("./data/bremen_condition_index.csv")
 ci <- ci_data %>% mutate(tissue = dry_tissue_in_T-t_boat,
                          wet_wt = clean_wt_in_S-s_boat,
                          shell = dry_shell_in_S-s_boat,
-                         ci=tissue/(wet_wt-shell)*100) %>% filter(gear!="initial")
+                         ci=tissue/(wet_wt-shell)*100,
+                         gear=as.factor(gear), date=as.factor(date), loc=as.factor(loc),
+                         log_ci = log(ci)) %>% 
+  filter(gear!="initial")
 
 ggboxplot(ci, x = "loc", y = "ci", color="gear", add = "jitter")+facet_wrap(~date)
+ggboxplot(ci, x = "loc", y = "ci", add = "jitter")+facet_wrap(~date)
+ggboxplot(ci, x = "gear", y = "ci", add = "jitter")+facet_wrap(~date)
 ggboxplot(ci, x = "gear", y = "ci", color="loc", add = "jitter")+facet_wrap(~date)
+
+coll_fac(data = ci, predictors=var_fac)
+relat_single(data = ci,response = "ci", predictors = var_fac) 
+distr_response(data = ci, response="ci") 
+
+ci1 <- lm(ci ~gear*date*loc, data = ci)
+ci2 <- lm(ci ~gear+date+loc, data = ci)
+ci3 <- glmmTMB(ci ~gear*date*loc, data = ci, family = tweedie)
+ci4 <- glmmTMB(ci ~gear+loc+date, data = ci, family = tweedie)
+compare_performance(ci1, ci2, ci3,ci4,metrics = c("AIC", "AICc", "BIC", "RMSE"))
+
+summary(ci3)
+check_model(ci3)
+check_residuals(ci3)
+testUniformity(ci3)
+testResiduals(ci3)
+plot(simulateResiduals(ci3))
+joint_tests(ci3)
+r2_efron(ci3)
+
+emmip(ci3, gear~loc)
+emmip(ci3, loc~gear)
+
+emm <- emmeans(ci3, specs="gear", type="response")
+pairs(emm, reverse=TRUE) %>% tidy()
+
+#Supplementary tables
+create_supp_gt(ci3)
 
 # Growth ---------------------------------------------------------------
 
@@ -449,7 +488,7 @@ g_data <- read.csv("./data/bremen_growth.csv") %>%
 
 g <- g_data %>% 
   group_by(date, location, gear) %>% 
-  summarize(across(c(height, length, width, cup_ratio, fan_ratio, chi), 
+  dplyr::summarize(across(c(height, length, width, cup_ratio, fan_ratio, chi), 
                    list(mean=mean, sd=sd))) %>% ungroup()
 
 
@@ -507,20 +546,37 @@ testM2 = cor.mtest(g_data %>% select(all_of(g_cols)), conf.level = 0.95, method 
 colnames(testM2$p) <- c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
 rownames(testM2$p) <-  c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
 
+correlation(g_data %>% select(all_of(g_cols)), method="spearman") %>% summary(redundant=TRUE) %>% plot()
+
+g_data %>% 
+  group_by(gear, location) %>% 
+  select(all_of(c(g_cols, "gear", "location"))) %>% 
+  correlation(method="spearman") #%>% arrange(rho)
+
+g_data %>% 
+  group_by(gear) %>% 
+  select(all_of(c(g_cols, "gear"))) %>% 
+  correlation() #%>% arrange(rho)
+
+g_data %>% 
+  group_by(location) %>% 
+  select(all_of(c(g_cols, "location"))) %>% 
+  correlation()
+
 corrplot(M2, 
          #type="lower",
-        method = 'circle', 
+       # method = 'circle', 
          #method = "number",
-         #method = "color",
+         method = "color",
          #order = 'AOE',
          order = "FPC",
          # order="hclust",
          diag = FALSE,
          p.mat = testM2$p, 
-         insig = 'label_sig', 
-         #insig = "blank", 
+         #insig = 'label_sig', 
+         insig = "blank", 
          sig.level = c(0.001, 0.01, 0.05),
-         #addCoef.col = "black",
+         addCoef.col = "black",
          pch.cex = 2,
          tl.srt=45,
          tl.col = 'black',

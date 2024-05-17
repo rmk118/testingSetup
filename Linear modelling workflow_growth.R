@@ -25,12 +25,27 @@ source("Linear modelling workflow_support functions.R")
 # Consult the article for more detailed explanations of each section. 
 
 # Import data frame (example only. Any other import function of R can be used).
-df <- read.table(file = "myfile.csv",      # Replace "myfile.csv" with your data file name.
-                 header = T,               # Specify whether first row contains variable names.
-                 sep = ",")                # Specify the field separator character in the data.
+g_data <- read.csv("./data/bremen_growth.csv") %>% 
+  mutate(cup_ratio=width/height,
+         fan_ratio=length/height,
+         sum_dims = length+width+height,
+         chi=((sum_dims*0.5-height)^2/(sum_dims*0.5))+
+           ((sum_dims*(1/3)-length)^2/(sum_dims/3))+
+           ((sum_dims*(1/6)-width)^2/(sum_dims/6)),
+         date = mdy(date)) %>% 
+  mutate(across(c("gear", "location", "cage", "bag", "trt", "tag_num"), as.factor))
 
+g_data <- g_data %>% mutate(cage= #make cage numbers unique
+  case_when(
+    cage==1 & location=="out"~ as.factor(1),
+    cage==2 & location=="out"~ as.factor(2),
+    cage==3 & location=="out"~ as.factor(3),
+    cage==1 & location=="in"~  as.factor(4),
+    cage==2 & location=="in"~  as.factor(5),
+    cage==3 & location=="in"~ as.factor(6),
+    .default=NA))
 # Carefully check data structure, column names and vector classes. Change them as needed.
-str(df)
+str(g_data)
 
 
 #-##############################-#
@@ -48,12 +63,12 @@ var_resp <- "response"                     # Replace with the name of the respon
 # * 3.2 Fixed predictors: quantitative and categorical predictor variables ----
 #=============================================================================#
 # FACTOR PREDICTOR variable(s)
-var_fac <- NA                              # assign default NA if missing.
+var_fac <- c("gear", "location", "trt", "cage", "date")   # assign default NA if missing.
   # var_fac <- c("fac_1", "fac_2", ... )   # Template: replace entries with the name(s) of your factor predictor(s).
                                            # Assure all these are factors with at least two levels.
 
 # NUMERIC or INTEGER PREDICTOR variable(s) 
-var_num <- NA                              # assign default NA if missing.
+var_num <- c("chl", "temp", "sal", "turb", "TPM", "POM", "PIM")                              # assign default NA if missing.
   # var_num <- c("num_1", "num_2", ... )   # Template: replace entries with the name(s) of your numeric predictor(s).
                                            # Assure all these are numeric or integer.
 
@@ -61,28 +76,10 @@ var_num <- NA                              # assign default NA if missing.
 # * 3.3 Random predictors: dependency structure of the data ----
 #==============================================================#
 # RANDOM term(s)
-var_rand <- NA                             # assign default NA if missing.
+var_rand <- c("cage", "tag_num")                           # assign default NA if missing.
   # var_rand <- c("rand_1", "rand_2", ...) # Template: replace entries with the name(s) of your factor random term(s).
                                            # Assure all these are factors with at least five levels.
 
-#==============================================#
-# * 3.4 Temporal and spatial data structure ----
-#==============================================#
-# The variables specified here will be used to check for temporal and/or spatial autocorrelation in model residuals (6.3).
-
-# NUMERIC or INTEGER TIME variable that specifies temporal structure.
-  # First, enter ONE variable that has information on temporal sequence/time:
-  var_time <- NA                          # assign default NA if missing.
-    # var_time <- "daytime"               # Template: replace entry with the name of your temporal variable.
-  
-  # Second, if these temporal data are structured, add the grouping variable below.
-  # (example: multiple parallel time-series that are split by experimental blocks)
-  var_time_groups <- NA                   # assign NA if missing.
-    # var_time_groups <- "daytime.grouping" # Template: replace entry with the name of your temporal grouping variable.
-
-# NUMERIC or INTEGER COORDINATES (x, y) that specify spatial structure.
-  var_space <- NA                         # assign NA if missing.
-    # var_space <- c("x_coord","y_coord") # Template: replace entry with the name of your variables that contain spatial coordinates.
 
   
 #=========================#

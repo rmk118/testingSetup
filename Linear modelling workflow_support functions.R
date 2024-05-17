@@ -3,6 +3,8 @@
 #  Matteo Santon, Fraenzi Korner-Nievergelt, Nico Michiels, Nils Anthes
 #  Version date: 03 November 2023
 #  -> SUPPORT FUNCTIONS FOR THE TEMPLATE
+
+# Modifications by Ruby Krasnow (last updated 16 May 2024)
 #---------------------------------------------------#
 
 #-###############################-#
@@ -936,12 +938,12 @@ dispersion_simulation <- function(data, modelTMB, response, predictor, n.sim) {
       
       sims_summary <- lapply(list_sims, function(x) {
         as.data.frame(x %>% group_by(!!sym(predictor)) %>% 
-                        summarize(variance = round(var(estimate), digits = 5)))
+                        summarise(variance = round(var(estimate), digits = 5)))
       }
       )
       all_sims <- do.call(rbind, sims_summary)
       temp <- data %>% group_by(!!sym(predictor)) %>% 
-        summarize(variance = var(!!sym(response)))
+        summarise(variance = var(!!sym(response)))
       
       # The following checks the quantile of observed parameters against simulated ones.
       # Depending on quantiles, observed vlines are coloured blue, orange, or red.
@@ -968,7 +970,7 @@ dispersion_simulation <- function(data, modelTMB, response, predictor, n.sim) {
         as.data.frame(list(variance = round(var(x), digits = 5)))
       })
       all_sims <- do.call(rbind, sims_summary) # do.call constructs and executes a function call from a name or 
-      temp <- data %>% summarize(variance = var(!!sym(response)))
+      temp <- data %>% summarise(variance = var(!!sym(response)))
       
       # The following checks the quantile of observed parameters against simulated ones.
       # Depending on quantiles, observed vlines are coloured blue, orange, or red.
@@ -977,7 +979,7 @@ dispersion_simulation <- function(data, modelTMB, response, predictor, n.sim) {
       names(grouped_sims) <- c("variance","obs_variance")
     }
   
-  prop <- as.data.frame(grouped_sims %>% summarize(extreme_variance = sum(variance > obs_variance)/n.sim, equal_variance = sum(variance == obs_variance)/n.sim))
+  prop <- as.data.frame(grouped_sims %>% summarise(extreme_variance = sum(variance > obs_variance)/n.sim, equal_variance = sum(variance == obs_variance)/n.sim))
   
   col.vline_variance <- ifelse(between(prop$extreme_variance, 0.05, 0.95) | prop$equal_variance > 0.1, "blue",  
                                ifelse(between(prop$extreme_variance, 0.005, 0.995) | prop$equal_variance > 0.01, "orange", "red"))
@@ -1040,10 +1042,10 @@ zero_simulation <- function(data, modelTMB, response, predictor, n.sim) {
         })
       }
       sims_summary <- lapply(list_sims, function(x) {
-        as.data.frame(x %>% group_by(!!sym(predictor)) %>% summarize(zeros = sum(estimate == 0)))
+        as.data.frame(x %>% group_by(!!sym(predictor)) %>% summarise(zeros = sum(estimate == 0)))
       })
       all_sims <- do.call(rbind, sims_summary)
-      temp <- data %>% group_by(!!sym(predictor)) %>% summarize(zeros = sum(!!sym(response) == 0))
+      temp <- data %>% group_by(!!sym(predictor)) %>% summarise(zeros = sum(!!sym(response) == 0))
       
       # The following checks the quantile of observed zero counts against simulated zeros.
       # Depending on quantiles, observed vlines are coloured blue, orange, or red.
@@ -1051,7 +1053,7 @@ zero_simulation <- function(data, modelTMB, response, predictor, n.sim) {
       grouped_sims <- cbind(all_sims, temp[2])
       names(grouped_sims) <- c(predictor,"zeros","obs_zeros")
       
-      prop <- as.data.frame(grouped_sims %>% group_by(!!sym(predictor)) %>% summarize(extreme = sum(zeros > obs_zeros)/n.sim, 
+      prop <- as.data.frame(grouped_sims %>% group_by(!!sym(predictor)) %>% summarise(extreme = sum(zeros > obs_zeros)/n.sim, 
                                                                                       equal = sum(zeros == obs_zeros)/n.sim))
       
       col.vline <- ifelse(between(prop$extreme, 0.05, 0.95) | prop$equal > 0.1, "blue",  
@@ -1078,7 +1080,7 @@ zero_simulation <- function(data, modelTMB, response, predictor, n.sim) {
       # Depending on quantiles, observed vlines are coloured blue, orange, or red.
       grouped_sims <- cbind(all_sims, temp)
       names(grouped_sims) <- c("zeros","obs_zeros")
-      prop <- as.data.frame(grouped_sims %>%  summarize(extreme = sum(zeros > obs_zeros)/n.sim, 
+      prop <- as.data.frame(grouped_sims %>%  summarise(extreme = sum(zeros > obs_zeros)/n.sim, 
                                                         equal = sum(zeros == obs_zeros)/n.sim))
       
       col.vline <- ifelse(between(prop$extreme, 0.05, 0.95) | prop$equal > 0.1, "blue",  
@@ -1700,7 +1702,7 @@ post_predict <- function(data, modelTMB, plot_predictors, offset, component) {
   filled_grid <- data.frame(
     grid  %>%  
       group_by(across(all_of(plot_predictors)))  %>%
-          summarize(median = median(median), pred_mod = median(pred_mod), lower = median(lower), upper = median(upper))
+          summarise(median = median(median), pred_mod = median(pred_mod), lower = median(lower), upper = median(upper))
   )
   
   return(filled_grid)
@@ -1739,7 +1741,7 @@ display_raw <- function(data, modelTMB, plot_predictors, plot_random, response, 
         dat_summary <- as.data.frame(data %>% 
                                        filter(!!sym(response) > 0) %>%
                                        group_by(across(all_of(predictors))) %>% 
-                                       summarize(mean = mean(!!sym(response))))
+                                       summarise(mean = mean(!!sym(response))))
         }
         # next line adds some zeros to conditional model when some replicate levels are missing
         dat_summary <- as.data.frame(left_join(unique(data[,predictors]), dat_summary) %>% 
@@ -1749,7 +1751,7 @@ display_raw <- function(data, modelTMB, plot_predictors, plot_random, response, 
         dat_summary <- as.data.frame(data %>% 
                                        mutate(zi_resp = case_when(!!sym(response) > 0 ~  1, !!sym(response) == 0 ~  0))  %>%
                                        group_by(across(all_of(predictors))) %>% 
-                                       summarize(mean = mean(zi_resp)))
+                                       summarise(mean = mean(zi_resp)))
         }
       if (component == "all") {
         if(!is.na(offset)) {
@@ -1760,7 +1762,7 @@ display_raw <- function(data, modelTMB, plot_predictors, plot_random, response, 
                                          group_by(across(all_of(predictors))) %>% 
                                          summarise(mean = mean(mean)))
           } else {
-            dat_summary <- as.data.frame(data %>% group_by(across(all_of(predictors)))  %>% summarize(mean = mean(!!sym(response))))
+            dat_summary <- as.data.frame(data %>% group_by(across(all_of(predictors)))  %>% summarise(mean = mean(!!sym(response))))
             }
         }
       } else {
@@ -1775,7 +1777,7 @@ display_raw <- function(data, modelTMB, plot_predictors, plot_random, response, 
             } else {
               dat_summary <- as.data.frame(data %>% 
                                              group_by(across(all_of(predictors))) %>%
-                                             summarize(mean = mean(!!sym(response))))
+                                             summarise(mean = mean(!!sym(response))))
             }
         } else {stop("ERROR: You implemented a zero-inflated model, please set component to “all”. If you want to model the zi-component separately, implement a hurdle model instead.")}
         
@@ -2140,4 +2142,41 @@ final_plotting <- function(data_summary, predictions, predictors, response, inte
   } 
   plot.final <- plot.final + theme(aspect.ratio = A.ratio)
   plot.final
+}
+
+
+
+
+# Post-hoc contrasts ------------------------------------------------------
+
+
+names <- c("Location" = "loc", "SE" = "std.error", "P-value adj." = "p.value", "P-value adj."="adj.p.value", "P-value adj."="p.value.adj", "Odds ratio"="odds.ratio", "Odds ratio"="ratio")
+
+
+pairs_fun <- function(mod, variable, by=NULL) {
+  emm <- suppressMessages(emmeans(mod, specs=variable, by=by, type="response"))
+  pairs(emm, reverse = "true", adjust="bonferroni") %>% 
+    tidy() %>% 
+    mutate(across(any_of(c("adj.p.value","p.value")), ~if_else(.x==0, 1e-10, .x))) %>% 
+    select(any_of(c("term", "contrast", "date", "gear", "loc", "odds.ratio", "ratio","estimate", "std.error", "statistic", "conf.low", "conf.high", "z.ratio", "p.value", "adj.p.value"))) %>% 
+    dplyr::rename(any_of(names)) %>% 
+    gt() %>% 
+    fmt_number(decimals =3) %>% 
+    sub_small_vals(threshold = 0.001) %>% 
+    tab_style(locations = cells_column_labels(columns=any_of(c("term", "contrast", "Location", "date", "gear", "estimate", "statistic", "conf.low", "conf.high"))),
+              style = cell_text(transform = "capitalize")) %>% 
+    tab_style(locations = cells_body(columns=any_of(c("term", "Location"))),
+              style = cell_text(transform = "capitalize")) %>% 
+    cols_move_to_end(contains("value"))
+}
+
+create_supp_gt <- function(mod) {
+  s1 <- pairs_fun(mod=mod,"gear") #gear, across all locations and dates
+  s2 <- pairs_fun(mod=mod,"loc") #location, across all gears and dates
+  s3 <- pairs_fun(mod=mod,"gear", by="loc") #gear contrasts by location, across dates
+  s4 <- pairs_fun(mod=mod,"loc", by="gear") #location contrasts by gear, across dates
+  s5 <- pairs_fun(mod=mod,"gear", by=c("date", "loc")) #gear contrasts for each date and location
+  
+  supp_gts <- gt_group(s1, s2, s3, s4, s5)
+  supp_gts
 }
