@@ -501,6 +501,8 @@ ggplot()+
 
 ggplot()+
   geom_line(data=g, aes(x=date, y=cup_ratio_mean, color=location, linetype = gear))
+ggplot()+
+  geom_boxplot(data=g, aes(x=gear, y=cup_ratio_mean, color=location))
 
 ggplot()+
   geom_line(data=g, aes(x=date, y=fan_ratio_mean, color=location, linetype = gear))
@@ -646,7 +648,7 @@ all_env <- t_match %>%
   select(turbidity, chl, TPM_mg_ml, POM_mg_ml, PIM_mg_ml,temp, loc, sample) %>% 
   mutate(location=if_else(loc=="Inside", "in", "out"))
 
-# %>% 
- #correlation(method="spearman")
+all_env %>% select(-sample) %>% 
+ correlation(method="spearman")
 
 df <- g_data %>% add_sample %>% left_join(all_env, by=c("location", "sample"))

@@ -627,7 +627,7 @@ residual_plots <- function(data, modelTMB, response) {
 
   
   # QQ-plot of model random intercepts 
-  if(length(mod$sdr$diag.cov.random) != 0) { 
+  if(length(modelTMB$sdr$diag.cov.random) != 0) { 
   rand <- ranef(modelTMB)$cond
   
   if (length(ranef(modelTMB)$cond) > 0) {
