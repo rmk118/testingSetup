@@ -141,7 +141,7 @@ disp_formula <- list(
   no_loc=~gear*date,
   no_gear = ~loc*date)
 
-disp_models <- tibble(disp_formula,
+disp_models_fouling <- tibble(disp_formula,
                       models = map(disp_formula,
                                    ~glmmTMB(data=df, 
                                             formula= prop_fouling ~ date*gear*loc,
@@ -149,7 +149,7 @@ disp_models <- tibble(disp_formula,
                                             family = beta_family()))) %>% 
   add_column(id=names(disp_formula), .before=1)
 
-disp_models <- disp_models %>% 
+disp_models_fouling <- disp_models_fouling %>% 
   mutate(tidy_model = map(models, broom.mixed::tidy),
          AIC=map(models, AIC),
          resids = map(models, residuals)) %>% unnest(cols=c(AIC)) %>%

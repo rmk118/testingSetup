@@ -1,5 +1,5 @@
 #Updated analysis of data from Bremen oyster experiment
-#Last modified: May 15, 2024
+#Last modified: May 22, 2024
 #Ruby Krasnow
 
 library(tidyverse)
@@ -9,8 +9,13 @@ library(GGally)
 library(Hmisc)
 library(ggstatsplot)
 library(easystats)
+library(PNWColors)
+library(zoo)
+library(ggpubr)
 
 source("Linear modelling workflow_support functions.R") 
+
+
 
 # Temp and Salinity -------------------------------------------------------
 
@@ -344,95 +349,125 @@ m_data <- data.frame(read.csv("./data/bremen_mortality.csv")) %>%
 ggboxplot(m_data, x = "loc", y = "num", color="gear", add = "jitter")
 ggboxplot(m_data, x = "gear", y = "num", color="loc", add = "jitter")
 
-
-m_formula <- list(
-  a = num ~ gear*loc+cage_id,
-  b = num ~ gear+gear:cage_id,
-  c = num~gear+cage_id,
-  d = num~gear*cage_id,
-  e= num~gear,
-  g= num~loc,
-  h= num~gear+loc)
-
-m_models <- tibble(m_formula,
-            models = map(m_formula, ~glmmTMB(data=m_data, formula=.x , family = poisson))) %>%
-  add_column(id=names(m_formula), .before=1)
-
-m_models <- m_models %>%
-  mutate(tidy_model = map(models, tidy),
-         AIC=map(models, AIC),
-         resids = map(models, residuals)) %>% unnest(cols=c(AIC)) %>%
-  mutate(resids = map(resids, as.numeric()),
-         normal_p = map(resids, ~shapiro.test(.x)$p.value)) %>%
-  unnest(cols=c(normal_p)) %>%
-  mutate(logLik=map(models, ~(logLik(.x)[1]))) %>%
-  mutate(r=map(models, ~r2(.x)[[1]])) %>% 
-  unnest(cols=c(logLik)) %>% arrange(AIC)
+# m_formula <- list(
+#   a = num ~ loc,
+#   b = num ~ gear,
+#   c = num ~ cage_id,
+#   d = num ~ loc+gear+cage_id,
+#   e = num ~ loc+gear,
+#   f = num ~ gear+cage_id,
+#   g = num ~ loc+cage_id,
+#   h = num ~ gear+loc,
+#   i = num ~ loc*gear*cage_id)
+# 
+# m_models <- tibble(m_formula,
+#             models = map(m_formula, ~glmmTMB(data=m_data, formula=.x , family = poisson))) %>%
+#   add_column(id=names(m_formula), .before=1)
+# 
+# compare_mods <- function(df) {
+#   df %>% mutate(tidy_model = map(models, tidy),
+#          AIC=future_map(models, AIC),
+#          BIC=future_map(models,BIC),
+#          RMSE=future_map(models,rmse),
+#          resids = future_map(models, residuals)) %>%
+#   unnest(cols=c(AIC,BIC, RMSE)) %>%
+#   mutate(resids = future_map(resids, as.numeric()),
+#         normal_p = future_map(resids, ~shapiro.test(.x)$p.value)) %>%
+#   unnest(cols=c(normal_p)) %>%
+#   mutate(logLik=future_map(models, ~(logLik(.x)[1]))) %>%
+#   mutate(r=future_map(models, ~r2_efron(.x)[[1]])) %>% 
+#   unnest(cols=c(logLik)) %>% arrange(AIC)
+# }
+# 
+# m_models <- m_models %>% compare_mods()
 
 m_mod <- glm(
   num ~ gear,
   family = poisson,
   data = m_data)
 
+check_residuals(m_mod) #equivalent to testUniformity(m_mod, plot=FALSE)
+check_outliers(m_mod)
+check_overdispersion(m_mod)
+
 parameters(m_mod)
 glance(m_mod)
 summary(m_mod)
 Anova(m_mod)
-emmeans(m_mod, pairwise~gear, type="response")
 
-check_residuals(m_mod)
-check_outliers(m_mod)
-check_overdispersion(m_mod)
-testUniformity(m_mod)
 r2(m_mod)
 r2_efron(m_mod)
 
+emmeans(m_mod, pairwise~gear, type="response")
+
+
 ggboxplot(m_data, x = "gear", y = "num", add = "jitter")+mytheme+
-  labs(x="Gear", y="Survived")
-  # + ylim(0,175) + stat_compare_means(method = "wilcox", label.x = 1.5, label.y = 20)
+  labs(x="Gear", y="Survived") #+ ylim(0,175)  
+#stat_compare_means(method = "wilcox", label.x = 1.5, label.y = 20)
+
 
 # Weight ---------------------------------------------------------------
 
 w_data <- read.csv("./data/bremen_biofouling_ratios.csv")
 
-w <- w_data %>% mutate(w = clean_wt_boat-weigh_boat,date=as.factor(date), 
-                       loc=as.factor(location), gear=as.factor(gear)) %>% mutate(log_w=log(w))
-
-ggboxplot(w, x = "location", y = "w", color="gear", add = "jitter")+facet_wrap(~date)
-ggboxplot(w, x = "location", y = "w", add = "jitter")+facet_wrap(~date)
+w <- w_data %>% mutate(w = clean_wt_boat-weigh_boat) %>% 
+  dplyr::rename(loc=location) %>% 
+  mutate(across(c(date, loc, gear),as.factor)) %>% 
+  filter(w<90) %>%  #one extreme outlier likely bottom-planted earlier, before start of experiment
+  mutate(log_w=log(w))
+                       
+ggboxplot(w, x = "loc", y = "w", color="gear", add = "jitter")+facet_wrap(~date)
+ggboxplot(w, x = "loc", y = "w", add = "jitter")+facet_wrap(~date)
+ggboxplot(w, x = "gear", y = "w", color="loc", add = "jitter")+facet_wrap(~date)
 ggboxplot(w, x = "gear", y = "w", add = "jitter")+facet_wrap(~date)
-ggboxplot(w, x = "gear", y = "w", color="location", add = "jitter")+facet_wrap(~date)
 
-var_fac = c("date", "loc", "gear")
-coll_fac(data = w,predictors=var_fac)
-relat_single(data = w,response = "w", predictors = var_fac) 
+coll_fac(data = w,predictors=c("date", "loc", "gear"))
+relat_single(data = w,response = "w", predictors = c("date", "loc", "gear")) 
 distr_response(data = w, response="w") 
 
-w1 <- glmmTMB(w ~ gear*loc*date, data = w)
-w2 <- glmmTMB(w ~ gear*date+loc, data = w)
-w3 <- glmmTMB(w ~ gear*date+loc, data = w, family="tweedie")
-w4 <- glmmTMB(w ~ gear*date+loc, data = w, family="lognormal")
-w5 <- lm(log_w ~gear*date+loc, data = w)
+# w_formulas <- list(
+#   a = w~date*gear*loc,
+#   b = w~gear*loc+date,
+#   c = w~gear+loc+date,
+#   d = w~date*gear+loc,
+#   e = w~gear*loc,
+#   f = w~gear*date,
+#   g = w~loc*date,
+#   h = w~gear,
+#   i = w~loc)
+# 
+# 
+# w_models <- tibble(w_formulas,
+#                    models = map(w_formulas, ~glmmTMB(data=w, formula=.x , family = tweedie))) %>%
+#   add_column(id=names(w_formulas), .before=1) %>% compare_mods()
+# 
+# w_models2 <- tibble(w_formulas,
+#                    models = map(w_formulas, ~glmmTMB(data=w, formula=.x , family = gaussian(link="log")))) %>%
+#   add_column(id=names(w_formulas), .before=1) %>% compare_mods()
+# 
+# w_models3 <- tibble(w_formulas,
+#                     models = map(w_formulas, ~glmmTMB(data=w, formula=.x , family = lognormal))) %>%
+#   add_column(id=names(w_formulas), .before=1) %>% compare_mods()
 
-compare_performance(w1, w2, w3,w5,metrics = c("AIC", "AICc", "BIC", "RMSE"))
-anova(w1, w2, w3)
-anova(w3, w4, w5)
 
-testUniformity(w5)
-testResiduals(w5)
-plot(simulateResiduals(w3))
-check_residuals(w5) # or testResiduals(w2)
-check_model(w5)
-r2(w5)
-r2_efron(w5)
-emmip(w5, gear~loc)
-emmip(w5, loc~gear)
-Anova(w5)
+w_mod <- glmmTMB(data=w, formula=w~date*gear*loc, family=lognormal)
 
-tidy(w5)
-joint_tests(w5)
-tidy_avg_comparisons(w5)
-create_supp_gt(w5)
+summary(w_mod)
+tidy(w_mod)
+joint_tests(w_mod)
+Anova(w_mod)
+glance(w_mod)
+
+check_overdispersion(w_mod)
+check_residuals(w_mod) # or testResiduals(w_mod)
+plot(simulateResiduals(w_mod))
+check_homogeneity(w_mod)
+r2_efron(w_mod)
+
+tidy_avg_comparisons(w_mod, vcov=vcov(w_mod))
+emmip(w_mod, gear~loc)
+emmip(w_mod, loc~gear)
+create_supp_gt(w_mod)
 
 # Condition Index ---------------------------------------------------------------
 
@@ -443,40 +478,64 @@ ci <- ci_data %>% mutate(tissue = dry_tissue_in_T-t_boat,
                          ci=tissue/(wet_wt-shell)*100,
                          gear=as.factor(gear), date=as.factor(date), loc=as.factor(loc),
                          log_ci = log(ci)) %>% 
-  filter(gear!="initial")
+  filter(gear!="initial", wet_wt<90) #one extreme outlier likely bottom-planted earlier, before start of experiment
 
 ggboxplot(ci, x = "loc", y = "ci", color="gear", add = "jitter")+facet_wrap(~date)
 ggboxplot(ci, x = "loc", y = "ci", add = "jitter")+facet_wrap(~date)
 ggboxplot(ci, x = "gear", y = "ci", add = "jitter")+facet_wrap(~date)
 ggboxplot(ci, x = "gear", y = "ci", color="loc", add = "jitter")+facet_wrap(~date)
 
-coll_fac(data = ci, predictors=var_fac)
-relat_single(data = ci,response = "ci", predictors = var_fac) 
+coll_fac(data = ci, predictors=c("date", "loc", "gear"))
+relat_single(data = ci,response = "ci", predictors=c("date", "loc", "gear")) 
 distr_response(data = ci, response="ci") 
 
-ci1 <- lm(ci ~gear*date*loc, data = ci)
-ci2 <- lm(ci ~gear+date+loc, data = ci)
-ci3 <- glmmTMB(ci ~gear*date*loc, data = ci, family = tweedie)
-ci4 <- glmmTMB(ci ~gear+loc+date, data = ci, family = tweedie)
-compare_performance(ci1, ci2, ci3,ci4,metrics = c("AIC", "AICc", "BIC", "RMSE"))
+# ci_formulas <- list(
+#   a = ci~date*gear*loc,
+#   b = ci~gear*loc+date,
+#   c = ci~gear+loc+date,
+#   d = ci~date*gear+loc,
+#   e = ci~gear*loc,
+#   f = ci~gear*date,
+#   g = ci~loc*date,
+#   h = ci~gear,
+#   i = ci~loc)
+# 
+# ci_models <- tibble(ci_formulas,
+#                     models = map(ci_formulas, ~lm(data=ci, formula=.x))) %>%
+#   add_column(id=names(ci_formulas), .before=1) %>% compare_mods()
+# 
+# ci_models2 <- tibble(ci_formulas,
+#                     models = map(ci_formulas, ~glmmTMB(data=ci, formula=.x, family=tweedie))) %>%
+#   add_column(id=names(ci_formulas), .before=1) %>% compare_mods()
+# 
+# ci_models3 <- tibble(ci_formulas,
+#                      models = map(ci_formulas, ~glmmTMB(data=ci, formula=.x, family=lognormal))) %>%
+#   add_column(id=names(ci_formulas), .before=1) %>% compare_mods()
 
-summary(ci3)
-check_model(ci3)
-check_residuals(ci3)
-testUniformity(ci3)
-testResiduals(ci3)
-plot(simulateResiduals(ci3))
-joint_tests(ci3)
-r2_efron(ci3)
 
-emmip(ci3, gear~loc)
-emmip(ci3, loc~gear)
+ci_mod <- glmmTMB(ci ~gear*date*loc, data = ci, family = tweedie)
 
-emm <- emmeans(ci3, specs="gear", type="response")
+Anova(ci_mod)
+glance(ci_mod)
+summary(ci_mod)
+joint_tests(ci_mod)
+tidy(ci_mod)
+
+check_model(ci_mod)
+check_residuals(ci_mod)
+testUniformity(ci_mod)
+testResiduals(ci_mod)
+plot(simulateResiduals(ci_mod))
+
+r2_efron(ci_mod)
+
+emmip(ci_mod, gear~loc)
+emmip(ci_mod, loc~gear)
+emm <- emmeans(ci_mod, specs="gear", type="response")
 pairs(emm, reverse=TRUE) %>% tidy()
 
 #Supplementary tables
-create_supp_gt(ci3)
+create_supp_gt(ci_mod)
 
 # Growth ---------------------------------------------------------------
 
@@ -489,103 +548,110 @@ g_data <- read.csv("./data/bremen_growth.csv") %>%
            ((sum_dims*(1/6)-width)^2/(sum_dims/6)),
          date = mdy(date))
 
-g <- g_data %>% 
+g1 <- g_data %>% 
   group_by(date, location, gear) %>% 
   dplyr::summarize(across(c(height, length, width, cup_ratio, fan_ratio, chi), 
                    list(mean=mean, sd=sd))) %>% ungroup()
 
 
 
-ggplot()+
-  geom_line(data=g, aes(x=date, y=height_mean, color=location, linetype = gear))
-
-ggplot()+
-  geom_line(data=g, aes(x=date, y=cup_ratio_mean, color=location, linetype = gear))
-ggplot()+
-  geom_boxplot(data=g, aes(x=gear, y=cup_ratio_mean, color=location))
-
-ggplot()+
-  geom_line(data=g, aes(x=date, y=fan_ratio_mean, color=location, linetype = gear))
-
-ggplot()+
-  geom_line(data=g, aes(x=date, y=chi_mean, color=location, linetype = gear))
-
-M1 = cor(g %>% select(ends_with("mean")), method = "s")
-colnames(M1) <- c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
-rownames(M1) <-  c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
-
-testM1 = cor.mtest(g %>% select(ends_with("mean")), conf.level = 0.95, method = "s")
-
-colnames(testM1$p) <- c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
-rownames(testM1$p) <-  c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
-
-corrplot(M1, 
-         #type="lower",
-         #method = 'circle', 
-         #method = "number",
-         method = "color",
-         #order = 'AOE',
-        order = "FPC",
-        # order="hclust",
-         diag = FALSE,
-         p.mat = testM1$p, 
-         #insig = 'label_sig', 
-         insig = "blank", 
-         #sig.level = c(0.001, 0.01, 0.05),
-         addCoef.col = "black",
-         pch.cex = 2,
-         tl.srt=45,
-         tl.col = 'black',
-         tl.offset = 1)
-
-ggpairs(g %>% select(ends_with("mean")))
-
-g_cols <- c("height", "length", "width", "cup_ratio", "fan_ratio", "chi")
-
-M2 = cor(g_data %>% select(all_of(g_cols)), method = "s")
-colnames(M2) <- c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
-rownames(M2) <-  c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
-
-testM2 = cor.mtest(g_data %>% select(all_of(g_cols)), conf.level = 0.95, method = "s", exact=FALSE)
-
-colnames(testM2$p) <- c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
-rownames(testM2$p) <-  c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
-
-correlation(g_data %>% select(all_of(g_cols)), method="spearman") %>% summary(redundant=TRUE) %>% plot()
-
-g_data %>% 
-  group_by(gear, location) %>% 
-  select(all_of(c(g_cols, "gear", "location"))) %>% 
-  correlation(method="spearman") #%>% arrange(rho)
-
-g_data %>% 
-  group_by(gear) %>% 
-  select(all_of(c(g_cols, "gear"))) %>% 
-  correlation() #%>% arrange(rho)
-
-g_data %>% 
-  group_by(location) %>% 
-  select(all_of(c(g_cols, "location"))) %>% 
-  correlation()
-
-corrplot(M2, 
-         #type="lower",
-       # method = 'circle', 
-         #method = "number",
-         method = "color",
-         #order = 'AOE',
-         order = "FPC",
-         # order="hclust",
-         diag = FALSE,
-         p.mat = testM2$p, 
-         #insig = 'label_sig', 
-         insig = "blank", 
-         sig.level = c(0.001, 0.01, 0.05),
-         addCoef.col = "black",
-         pch.cex = 2,
-         tl.srt=45,
-         tl.col = 'black',
-         tl.offset = 1)
+# ggplot()+
+#   geom_line(data=g1, aes(x=date, y=height_mean, color=location, linetype = gear))
+# ggplot()+
+#   geom_boxplot(data=g1, aes(x=gear, y=height, color=location))+facet_wrap(~date)
+# 
+# ggplot()+
+#   geom_line(data=g1, aes(x=date, y=cup_ratio_mean, color=location, linetype = gear))
+# ggplot()+
+#   geom_boxplot(data=g1, aes(x=gear, y=cup_ratio_mean, color=location))
+# 
+# ggplot()+
+#   geom_line(data=g1, aes(x=date, y=fan_ratio_mean, color=location, linetype = gear))
+# 
+# ggplot()+
+#   geom_boxplot(data=g1, aes(x=gear, y=fan_ratio_mean, color=location))+facet_wrap(~date)
+# 
+# ggplot()+
+#   geom_line(data=g, aes(x=date, y=chi_mean, color=location, linetype = gear))
+# ggplot()+
+#   geom_boxplot(data=g, aes(x=gear, y=chi, color=location))+facet_wrap(~date)
+# 
+# M1 = cor(g %>% select(ends_with("mean")), method = "s")
+# colnames(M1) <- c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
+# rownames(M1) <-  c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
+# 
+# testM1 = cor.mtest(g %>% select(ends_with("mean")), conf.level = 0.95, method = "s", exact=FALSE)
+# 
+# colnames(testM1$p) <- c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
+# rownames(testM1$p) <-  c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
+# 
+# corrplot::corrplot(M1, 
+#          #type="lower",
+#          #method = 'circle', 
+#          #method = "number",
+#          method = "color",
+#          #order = 'AOE',
+#         order = "FPC",
+#         # order="hclust",
+#          diag = FALSE,
+#          p.mat = testM1$p, 
+#          #insig = 'label_sig', 
+#          insig = "blank", 
+#          #sig.level = c(0.001, 0.01, 0.05),
+#          addCoef.col = "black",
+#          pch.cex = 2,
+#          tl.srt=45,
+#          tl.col = 'black',
+#          tl.offset = 1)
+# 
+# ggpairs(g %>% select(ends_with("mean")))
+# 
+# g_cols <- c("height", "length", "width", "cup_ratio", "fan_ratio", "chi")
+# 
+# M2 = cor(g_data %>% select(all_of(g_cols)), method = "s")
+# colnames(M2) <- c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
+# rownames(M2) <-  c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
+# 
+# testM2 = cor.mtest(g_data %>% select(all_of(g_cols)), conf.level = 0.95, method = "s", exact=FALSE)
+# 
+# colnames(testM2$p) <- c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
+# rownames(testM2$p) <-  c("Height", "Length", "Width", "Cup ratio", "Fan ratio", "Shell shape")
+# 
+# correlation(g_data %>% select(all_of(g_cols)), method="spearman") %>% summary(redundant=TRUE) %>% plot()
+# 
+# g_data %>% 
+#   group_by(gear, location) %>% 
+#   select(all_of(c(g_cols, "gear", "location"))) %>% 
+#   correlation(method="spearman") #%>% arrange(rho)
+# 
+# g_data %>% 
+#   group_by(gear) %>% 
+#   select(all_of(c(g_cols, "gear"))) %>% 
+#   correlation() #%>% arrange(rho)
+# 
+# g_data %>% 
+#   group_by(location) %>% 
+#   select(all_of(c(g_cols, "location"))) %>% 
+#   correlation()
+# 
+# corrplot::corrplot(M2, 
+#          #type="lower",
+#        # method = 'circle', 
+#          #method = "number",
+#          method = "color",
+#          #order = 'AOE',
+#          order = "FPC",
+#          # order="hclust",
+#          diag = FALSE,
+#          p.mat = testM2$p, 
+#          #insig = 'label_sig', 
+#          insig = "blank", 
+#          sig.level = c(0.001, 0.01, 0.05),
+#          addCoef.col = "black",
+#          pch.cex = 2,
+#          tl.srt=45,
+#          tl.col = 'black',
+#          tl.offset = 1)
 
 
 
@@ -646,9 +712,58 @@ all_env <- t_match %>%
   full_join(SPM_match) %>% 
   full_join(temp_match) %>% 
   select(turbidity, chl, TPM_mg_ml, POM_mg_ml, PIM_mg_ml,temp, loc, sample) %>% 
-  mutate(location=if_else(loc=="Inside", "in", "out"))
+  mutate(location=if_else(loc=="Inside", "in", "out")) %>% 
+  dplyr::rename(TPM=TPM_mg_ml, POM=POM_mg_ml, PIM=PIM_mg_ml)
 
 all_env %>% select(-sample) %>% 
  correlation(method="spearman")
 
 df <- g_data %>% add_sample %>% left_join(all_env, by=c("location", "sample"))
+
+
+
+growth_rates <- df %>% group_by(location, gear, tag_num, sample, date) %>% 
+  summarise(mean_height = mean(height)) %>% 
+  group_by(location, gear, tag_num) %>% 
+  mutate(date2 = date(as.character(date)),
+         days_since = as.numeric(date2-lag(date2)),
+         growth = mean_height-lag(mean_height),
+         growth_rate = growth/days_since) %>% na.omit()
+ # mutate(growth_rate = if_else(growth_rate<0, 0, growth_rate))
+
+growth_rates <- growth_rates %>% left_join(all_env)
+
+ggplot()+
+  geom_boxplot(data=growth_rates, aes(x=gear, y=growth_rate, color=location))+facet_wrap(~date)
+
+gghistogram(growth_rates$growth_rate)
+
+# gaussian better than tweedie
+
+growth1 <- glmmTMB(growth_rate ~ chl+temp+PIM+turbidity+date+gear, data = growth_rates, family="gaussian")
+#growth2 <- glmmTMB(growth_rate ~ chl+date, data = growth_rates, family="gaussian")
+growth3 <- glmmTMB(growth_rate ~ temp, data = growth_rates, family="gaussian")
+
+growth4 <- glmmTMB(growth_rate ~ chl+date+(1|gear)+(1|location), data = growth_rates, family="gaussian")
+
+
+growth5 <- glmmTMB(growth_rate ~ loc*date, data = growth_rates, dispformula = ~gear,
+                   family = gaussian)
+growth6 <- glmmTMB(growth_rate ~ chl+date, data = growth_rates, dispformula = ~gear+date,
+                   family = gaussian)
+growth2 <- glmmTMB(growth_rate ~ temp, data = growth_rates, dispformula = ~gear+date,
+                   family = gaussian)
+
+anova(growth1, growth2, growth3, growth4, growth5, growth6)
+Anova(growth6)
+Anova(growth1)
+
+
+plot(simulateResiduals(growth6)) #testResiduals(growth6)
+testDispersion(growth3)
+check_residuals(growth2)
+check_overdispersion(growth2)
+check_predictions(growth2)
+
+r2_efron(growth2)
+

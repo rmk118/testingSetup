@@ -653,3 +653,133 @@ corrplot(M3$BP.Inside$r, diag = FALSE, type="lower", p.mat = M3$BP.Inside$P, ins
 
 
 sample_dates <- g_data %>% select(date) %>% distinct()
+
+disp_formula_short <- list(
+  full = ~gear*loc,
+  add_only=~gear+loc,
+  gear=~gear,
+  loc=~loc)
+
+disp_models_m <- disp_models_m %>% 
+  mutate(tidy_model = map(models, broom.mixed::tidy),
+         r2=map(models, r2_efron),
+         resids = map(models, residuals)) %>% unnest(cols=c(r2)) %>%
+  mutate(resids = map(resids, as.numeric()),
+         normal_p = map(resids, ~shapiro.test(.x)$p.value)) %>%
+  unnest(cols=c(normal_p)) %>%
+  mutate(disp=map(models, ~check_overdispersion(m_mod)$chisq_statistic)) %>% 
+  unnest(cols=c(disp)) %>% arrange(r2)
+
+disp_models_m <- tibble(disp_formula_short,
+                        models = map(disp_formula_short,
+                                     ~glmmTMB(data=m_data, 
+                                              formula= num~gear,
+                                              dispformula=.x, 
+                                              family = poisson))) %>% 
+  add_column(id=names(disp_formula_short), .before=1)
+
+compare_performance(ci1, ci2, ci3,ci4,metrics = c("AIC", "AICc", "BIC", "RMSE"))
+
+
+# FAN RATIO MODELS --------------------------------------------------------
+
+disp_models_fan <- tibble(disp_formula, 
+                          models = future_map(disp_formula,
+                                              ~glmmTMB(data=g, 
+                                                       formula= fan_ratio ~ chl+temp+PIM+date*gear,
+                                                       dispformula=.x, 
+                                                       family = tweedie))) 
+
+
+disp_models_fan <- disp_models_fan %>% add_column(id=names(disp_formula), .before=1) %>% compare_mods()
+
+#glmmTMB(fan_ratio ~ chl+temp+PIM+turbidity+date+gear+loc, data = g, family=lognormal) #fan_mod lower AIC than this model with tweedie, Gamma, and lognormal families
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date+gear, data = g, family=lognormal) #fan_mod lower AIC than this model with tweedie, Gamma, and lognormal families
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear*loc, data = g, family="tweedie") #rank-deficient
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*loc+gear, data = g, family="tweedie") #rank-deficient
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear+loc, data = g, family="lognormal") #fan_mod lower AIC than this model with tweedie, Gamma, and lognormal families
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date+gear*loc, data = g, family=tweedie) #fan_mod lower AIC than this model with tweedie, Gamma, and lognormal families
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear+loc+date, data = g, family=Gamma) #fan_mod lower AIC than this model with tweedie, Gamma, and lognormal families
+
+
+#glm(fan_ratio ~ chl+temp+PIM+date*gear, data = g, family=Gamma) #fan_mod lower AIC
+#glmer(fan_ratio~date*gear*loc+(1|date), data=g, family=Gamma) #singular
+
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear, data = g, family=Gamma) #fan_mod lower AIC than this model with tweedie, Gamma, and lognormal families
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear, data = g, family="lognormal", dispformula=~gear*loc) #AIC=-6496
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear, data = g, family="lognormal", dispformula=~loc+date) #AIC=-6535
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear, data = g, family="lognormal", dispformula=~gear+date) #AIC=-6537
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear, data = g, family="lognormal", dispformula=~date) #AIC=-6537
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear, data = g, family="lognormal", dispformula=~loc) #fan_mod lower AIC
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear, data = g, family="lognormal", dispformula=~gear)  #fan_mod lower AIC
+
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear, data = g, family="tweedie", dispformula=~gear*loc) #fan_mod lower AIC
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear, data = g, family="tweedie", dispformula=~gear+loc) #fan_mod lower AIC
+
+
+#glmmTMB(fan_ratio ~ date*gear*loc, data = g, dispformula=~loc+date) #non-uniform residuals
+
+####### Convergence issues (iteration limit reached without convergence)
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear, data = g, family="tweedie", dispformula=~gear+date)
+#glmmTMB(fan_ratio ~ chl+temp+PIM+date*gear, data = g, family="tweedie", dispformula=~date+loc)
+#glmmTMB(fan_ratio ~ date*gear*loc, data = g, family="tweedie", dispformula=~gear*loc)
+#glmmTMB(fan_ratio ~ date*gear*loc, data = g, family="tweedie", dispformula=~gear+loc)
+#glmmTMB(fan_ratio ~ date*gear*loc, data = g, family="tweedie", dispformula=~gear*date)
+#glmmTMB(fan_ratio ~ date*gear*loc, data = g, family="tweedie", dispformula=~gear+date)
+#glmmTMB(fan_ratio ~ date*gear*loc, data = g, family="tweedie", dispformula=~loc+date)
+#glmmTMB(fan_ratio ~ date*gear*loc, data = g, family="lognormal")
+#glmmTMB(fan_ratio ~ date*gear*loc, data = g, family="lognormal", dispformula=~loc+date)
+
+
+#glmmTMB(fan_ratio~ chl+temp+PIM+date*gear+date*loc, data=g, family=lognormal) #AIC -6528 but rank-deficient
+#glm(fan_ratio~date*gear*loc, data=g, family=Gamma) fan_mod lower AIC
+
+anova(glm1, fan_mod)
+compare_performance(glm1, fan_mod, metrics = c("AIC", "AICc", "BIC", "RMSE"))
+
+
+# CUP RATIO MODELS --------------------------------------------------------
+
+# glm1<-glmmTMB(cup_ratio ~ chl+temp+PIM+turbidity+date+gear*location, data = df, family="beta_family")
+# glm1<-glmmTMB(cup_ratio ~ chl+temp+PIM+turbidity+date+gear*location, data = df, family="beta_family")
+# glm1<-glmmTMB(cup_ratio ~ chl+PIM+turbidity+date+gear*location, data = df, family="beta_family")
+# glm1<-glmmTMB(cup_ratio ~ chl+PIM+date+gear*location+(1|tag_num), data = df, family="beta_family")
+# glmm1<-glmmTMB(cup_ratio ~ chl+PIM+date+gear*location, data = df, family="beta_family")
+# glmm2<-glmmTMB(cup_ratio ~ chl+PIM+date+gear*location, data = df,dispformula = ~gear, family="beta_family")
+# glmm3<-glmmTMB(cup_ratio ~ chl+PIM+date+gear*location, data = df,dispformula = ~gear*location, family="beta_family")
+# 
+#glmmTMB(cup_ratio ~ date*gear*loc, data = g, dispformula = ~loc*date, family="beta_family") #lower AIC than cup_mod
+
+#glmmTMB(cup_ratio ~ date*gear*loc, data = g, dispformula = ~date*loc, family="lognormal") #convergence issues
+# Lower AIC but gives convergence warning and has same efron's pseudo-R^2
+# glmm5<-glmmTMB(cup_ratio ~ date*gear*location, data = df,dispformula = ~date*gear*location, family="beta_family")
+# glmm6<-glmmTMB(cup_ratio ~ date*gear*location+chl, data = df,dispformula = ~date*gear*location, family="beta_family")
+
+# Shell shape -------------------------------------------------------------
+
+glmmTMB(chi ~ chl+temp+PIM+turbidity+date+gear, data =g, family="tweedie")
+chi1<-glmmTMB(chi ~ date*gear*location, data =g, family=tweedie, dispformula = ~date+gear+loc)
+chi3<-glmmTMB(chi ~ temp+turbidity+date+loc*gear, data =g, family="tweedie")
+#chi4<-glmmTMB(chi ~ date*gear*location+chl+turbidity+PIM+temp, data =g, family="tweedie") #rank-deficient
+chi5<-glmmTMB(chi ~ date*gear*location+(1|tag_num), data =g, family="tweedie")
+
+anova(chi_mod, chi1)
+plot(check_homogeneity(chi5))
+
+
+# Height ------------------------------------------------------------------
+
+h1<-lm(height ~ chl+temp+turbidity+date+gear, data = g)
+h2<-lm(height ~ chl+temp+date+gear, data = g)
+h3<-lm(height ~ chl+temp+date*gear, data = g)
+h3.5<-lm(height ~ temp+date*gear, data = g)
+h4<-glmmTMB(height ~ chl+temp+date*gear+(1|location), data = g)
+h5<-glmmTMB(height ~ chl+temp+date*gear+(1|tag_num), data = g)
+h5<-lmer(height ~ chl+temp+date*gear+(1|tag_num), data = g)
+h7<-lmer(height ~ temp+date+date:gear+(1|tag_num), data = g)
+check_model(h5)
+
+compare_performance(h1, h2, h3, h3.5,h4,h5,h6,h7,metrics = c("AIC", "AICc", "BIC", "RMSE"))
+compare_performance(h5, h6,h7)
+anova(h1, h2, h3, h3.5, h4, h5, h6)
+anova(h5, h6,h7)

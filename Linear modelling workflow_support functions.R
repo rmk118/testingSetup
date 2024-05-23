@@ -20,7 +20,8 @@ packages <- c("tidyverse", "glmmTMB", "emmeans", "performance",
               "MASS", "DHARMa", "arm", "ggplot2", "ggdist",
               "lattice", "ggbeeswarm", "gridExtra", "mgcv", 
               "reshape2", "ggmosaic", "cdata", "car", 
-              "reshape", "parameters", "RColorBrewer", "grDevices","geoR", "broom.mixed", "broom.helpers", "gt")
+              "reshape", "parameters", "RColorBrewer", 
+              "grDevices","geoR", "broom.mixed", "broom.helpers", "gt", "furrr")
 
 # ## Load or install & load all these:
 # inst <- packages[1:24] %in% installed.packages()
@@ -28,6 +29,10 @@ packages <- c("tidyverse", "glmmTMB", "emmeans", "performance",
 
 # Load packages into session
 lapply(packages, require, character.only = TRUE)
+
+rename <- dplyr::rename
+summarize <- dplyr::summarize
+select <- dplyr::select
 
 
 #-#########################################-#
