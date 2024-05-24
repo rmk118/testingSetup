@@ -6,6 +6,7 @@ library(tidyverse)
 library(patchwork)
 library(easystats)
 library(rtide)
+library(rstatix)
 library(scales)
 
 hobo <- read.csv("./data/hobo.csv") %>% 

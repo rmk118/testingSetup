@@ -463,7 +463,7 @@ em
 
 #pairs(emmeans(mod2, "gear", by="loc", type="response"), reverse = "true", adjust="bonferroni")
 
-create_supp_gt <- function(mod, variable, by=TRUE) {
+create_supp_gt_avg_comps <- function(mod, variable, by=TRUE) {
   avg_comparisons(mod, vcov=vcov(mod2), variables=variable, by=by, p_adjust = "bonferroni") %>% 
     select(any_of(c("term", "contrast", "date", "gear", "loc", "estimate", "std.error", 
                     "statistic","p.value", "conf.low", "conf.high"))) %>% 

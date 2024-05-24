@@ -21,7 +21,8 @@ packages <- c("tidyverse", "glmmTMB", "emmeans", "performance",
               "lattice", "ggbeeswarm", "gridExtra", "mgcv", 
               "reshape2", "ggmosaic", "cdata", "car", 
               "reshape", "parameters", "RColorBrewer", 
-              "grDevices","geoR", "broom.mixed", "broom.helpers", "gt", "furrr")
+              "grDevices","geoR", "broom.mixed", "broom.helpers", "gt", 
+              "marginaleffects", "furrr")
 
 # ## Load or install & load all these:
 # inst <- packages[1:24] %in% installed.packages()
@@ -2185,3 +2186,32 @@ create_supp_gt <- function(mod) {
   supp_gts <- gt_group(s1, s2, s3, s4, s5)
   supp_gts
 }
+
+
+
+create_supp_gt_avg_comps <- function(mod, variable, by=TRUE) {
+  avg_comparisons(mod, vcov=vcov(mod2), variables=variable, by=by, p_adjust = "bonferroni") %>% 
+    select(any_of(c("term", "contrast", "date", "gear", "loc", "estimate", "std.error", 
+                    "statistic","p.value", "conf.low", "conf.high"))) %>% 
+    dplyr::rename(any_of(names)) %>% 
+    gt() %>% 
+    fmt_number(decimals =4) %>% 
+    sub_small_vals(threshold = 0.001) %>% 
+    tab_style(locations = cells_column_labels(columns=any_of(c("term", "contrast", "date", "gear", "loc", "estimate", "statistic", "conf.low", "conf.high"))),
+              style = cell_text(transform = "capitalize")) %>% 
+    tab_style(locations = cells_body(columns="term"),
+              style = cell_text(transform = "capitalize"))
+}
+
+
+supp_avg_comps <- function(mod) {
+s1 <- create_supp_gt_avg_comps(mod=mod2, variable=list(gear="pairwise")) #gear, across all locations and dates
+s2 <- create_supp_gt_avg_comps(mod=mod2,variable=list(loc="pairwise")) #location, across all gears and dates
+s3 <- create_supp_gt_avg_comps(mod=mod2,variable=list("gear"="pairwise"), by="loc") #gear contrasts by location, across dates
+s4 <- create_supp_gt_avg_comps(mod=mod2,variable=list("loc"="pairwise"), by="gear") #location contrasts by gear, across dates
+s5 <- create_supp_gt_avg_comps(mod=mod2,variable=list("gear"="pairwise"), by=c("date", "loc")) #gear contrasts for each date and location
+
+supp_gts <- gt_group(s1, s2, s3, s4, s5)
+supp_gts
+}
+

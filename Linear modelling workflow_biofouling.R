@@ -225,14 +225,32 @@ comp_int(modelTMB = mod2,
 
 tidy(mod2)
 summary(mod2)
-joint_tests(mod2)
+a<- joint_tests(mod2) %>% 
+  select(`model term`, F.ratio, Chisq, p.value) %>% 
+  dplyr::rename("Term"="model term", "F-ratio"="F.ratio", "P-value"="p.value") %>% 
+  mutate(Term = case_when(
+    Term=="loc"~"location",
+    Term=="date:loc"~"date:location",
+    Term=="gear:loc"~"gear:location",
+    Term=="date:gear:loc"~"date:gear:location",
+    .default=Term
+  ))
+
+a %>% gt() %>%
+      fmt_number(decimals =3) %>% 
+     sub_small_vals(threshold = 0.001) %>% cols_label(Chisq="{{:chi:^2}}") %>% 
+  opt_horizontal_padding(scale = 3)
+
 r2_efron(mod2)
 
 #Post-hoc contrasts
 create_supp_gt(mod2)
 
+check_residuals(mod2)
+check_overdispersion(mod2)
+check_predictions(mod2, iterations = 200)
 
 
-
-
+create_supp_gt(mod2)
+supp_avg_comps(mod2)
 

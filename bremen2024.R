@@ -32,6 +32,8 @@ common <- inner_join(Inside, Outside, by="date") %>%
   select(-c("loc.x", "loc.y")) %>% 
   mutate(sal_diff = sal_in - sal_out, temp_diff=temp_in-temp_out)
 
+length(common %>% filter(temp_diff>0) %>% pull(temp_diff))/length(common$temp_diff)
+
 # ggplot(common, aes(x=date, y=sal_diff))+geom_line()
 # ggplot(noAir, aes(x=date, y=sal, color=loc))+geom_line()
  ggplot(hobo, aes(x=date, y=sal, color=loc))+geom_line()+
@@ -64,9 +66,10 @@ temp_plot <-ggplot(noAir_roll, aes(x=date, y=temp, color=loc))+
   geom_line()+
   theme_classic()+
   scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
-  labs(x=NULL,y="Temperature (°C)", color="Location")
+  labs(x=NULL,y="Temperature (°C)", color="Location")+
+  theme(axis.title.y = element_text(margin = margin(r=10)))
 
-
+noAir %>% group_by(loc) %>% summarise(min(temp), max(temp))
 
 # Turbidity -------------------------------------------------------
 
@@ -263,6 +266,8 @@ accel_plot <- ggplot(data=cleaned_accel, aes(x = date, y = motionIndex, color=lo
   theme_classic()+ labs(x = "", y = "Motion", color="Location") +
   scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
   theme(legend.position="none")
+
+cleaned_accel %>% group_by(trt) %>% summarise(motion=mean(motionIndex), motion_sd = sd(motionIndex))
 
 # Accel Temp -------------------------------------------------------
 
