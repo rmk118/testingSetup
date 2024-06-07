@@ -13,6 +13,7 @@ library(PNWColors)
 library(zoo)
 library(ggpubr)
 
+setwd("~/Downloads/testingSetup")
 source("Linear modelling workflow_support functions.R") 
 
 
@@ -233,14 +234,38 @@ clean_accel_df <- function(df) {
     select(date, accelX, accelY, accelZ, trt)
 }
      
-cleaned_accel <- map(accel_dfs, clean_accel_df) %>% 
-  bind_rows() %>% 
-  group_by(trt) %>%  mutate(
-        diffX = accelX - lag(accelX),
-        diffY = accelY - lag(accelY),
-        diffZ = accelZ - lag(accelZ),
-        motionIndex = sqrt((diffX)^2+(diffY)^2)+(diffZ)^2) %>% na.omit()
-cleaned_accel <- cleaned_accel %>% mutate(loc = if_else(trt=="oc", "Outside", "Inside"))
+accel_dfs <- map(accel_dfs, clean_accel_df) %>% 
+  bind_rows() 
+
+accel_dfs %>% mutate(day = date(date)) %>% select(day, trt) %>% distinct() %>% count(trt)
+
+cleaned_accel <- accel_dfs %>% 
+  mutate(day = date(date),
+         hour = round_date(date, unit="hour"), 
+         motionIndex = sqrt((accelX)^2+(accelY)^2+(accelZ)^2)) %>% 
+  #group_by(trt, day) %>% 
+  group_by(trt, hour) %>% 
+  summarize(orb=sd(motionIndex)*9.80665) %>% 
+  mutate(loc = if_else(trt=="oc", "Outside", "Inside")) %>% 
+  filter(hour > ymd_hms("2022-09-12 15:00:00")) #& hour < ymd_hms("2022-10-06 15:00:00"))
+    
+    
+#cleaned_accel <- accel_dfs %>% 
+ # group_by(trt) %>%  
+  #mutate(
+        # diffX = accelX - lag(accelX),
+        # diffY = accelY - lag(accelY),
+        # diffZ = accelZ - lag(accelZ),
+       # motionIndex = sqrt((diffX)^2+(diffY)^2)+(diffZ)^2)
+    
+ggplot(data=cleaned_accel, aes(x = hour, y = orb, color=loc))+ 
+  geom_line()+ 
+  facet_wrap(~trt, ncol=1, labeller = labeller(trt=c("ib" = "Inside Bags", "ic"= "Inside Cages", "oc"="Outside Cages")))+
+  theme_classic()+ 
+  labs(x = "", y = bquote('Hourly SD'~(m/s^2)), color="Location") +
+  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
+  theme(legend.position="none")
+
 
 ggplot(data=cleaned_accel, aes(x = date, y = motionIndex, color=loc))+ 
   geom_line()+ 

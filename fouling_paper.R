@@ -1,7 +1,7 @@
 #---------------------------------------------------#
 # Interacting effects of environment and cultivation method on biofouling of farmed oysters
 #  Ruby Krasnow
-#  Last updated May 24, 2024
+#  Last updated June 7, 2024
 #---------------------------------------------------#
 
 
@@ -83,32 +83,32 @@ clean_accel_df <- function(df) {
 cleaned_accel <- map(accel_dfs, clean_accel_df) %>% 
   bind_rows()
   
-#Calculate the motion index
+#Calculate the relative orbital velocity, as the SD of the magnitude of the accelerations each hour
 cleaned_accel <- cleaned_accel %>% 
-  group_by(trt) %>%  mutate(
-    diffX = accelX - lag(accelX),
-    diffY = accelY - lag(accelY),
-    diffZ = accelZ - lag(accelZ),
-    motionIndex = sqrt((diffX)^2+(diffY)^2)+(diffZ)^2) %>% 
-  na.omit()
+  mutate(day = date(date),
+       hour = round_date(date, unit="hour"), 
+       magnitude = sqrt((accelX)^2+(accelY)^2+(accelZ)^2)) %>% 
+  group_by(trt, hour) %>% 
+  dplyr::summarize(orb=sd(magnitude)*9.80665) %>% #calculate SD and multiply by standard gravity = 9.80665 m/s^2
+  filter(hour > ymd_hms("2022-09-12 15:00:00")) #remove outliers from initial deployment
 
 #Create location column from treatment names
 cleaned_accel <- cleaned_accel %>% 
   mutate(loc = if_else(trt=="oc", "Outside", "Inside"))
 
-
 # FIGURE 2 - Accelerometer
-ggplot(data=cleaned_accel, aes(x = date, y = motionIndex, color=loc))+ 
+ggplot(data=cleaned_accel, aes(x = hour, y = orb, color=loc))+ 
   geom_line()+ 
   facet_wrap(~trt, ncol=1, labeller = labeller(trt=c("ib" = "Inside Bags", "ic"= "Inside Cages", "oc"="Outside Cages")))+
-  theme_classic()+ labs(x = "", y = "Motion", color="Location") +
+  theme_classic()+ labs(x = "", y = bquote('Hourly SD'~(m/s^2)), color="Location") +
   scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
   theme(axis.title.y = element_text(margin = margin(r=10)))
 
 #Find the mean and SD of the motion index for each treatment
 cleaned_accel %>% 
   group_by(trt) %>% 
-  summarise(motion=mean(motionIndex), motion_sd = sd(motionIndex))
+  summarise(motion=mean(orb), motion_sd = sd(orb)) %>% 
+  mutate(across(c(motion, motion_sd), ~round(.x, digits = 3)))
 
 # Type/abundance of hard biofouling ---------------------------------------------------
 
