@@ -1,7 +1,7 @@
 #---------------------------------------------------#
 # Interacting effects of environment and cultivation method on biofouling of farmed oysters
 #  Ruby Krasnow
-#  Last updated June 7, 2024
+#  Last updated September 1, 2024
 #---------------------------------------------------#
 
 
@@ -36,8 +36,14 @@ common <- inner_join(Inside, Outside, by="date") %>%
 
 #Total number of observations
 total_obs <- length(common$temp_diff)
+
+# Mean and SD of difference in-out
+mean(common$temp_diff)
+sd(common$temp_diff)
+
 #Number of observations where the temperature inside the pound was warmer than outside
 inside_greater <- length(common %>% filter(temp_diff>0) %>% pull(temp_diff))
+
 #Percentage of total where inside was warmer than outside
 inside_greater/total_obs
 
@@ -58,6 +64,18 @@ ggplot(noAir_roll, aes(x=date, y=temp, color=loc))+
   scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
   labs(x=NULL,y="Temperature (°C)", color="Location")+
   theme(axis.title.y = element_text(margin = margin(r=10)))
+
+# Plot - not rolling
+common %>% pivot_longer(cols = c(temp_in, temp_out), names_to = "location") %>% ggplot()+
+  geom_line(aes(x=date, y=value, color=location))+
+  theme_classic()+
+  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)])+
+  labs(x=NULL,y="Temperature (°C)", color="Location")+
+  theme(axis.title.y = element_text(margin = margin(r=10)))
+
+common %>% mutate(month = month(date)) %>% 
+  group_by(month) %>% 
+  summarise(mean_diff = mean(temp_diff), sd_diff = sd(temp_diff), temp_in = mean(temp_in), temp_out = mean(temp_out))
 
 
 # Accelerometer -------------------------------------------------------
@@ -118,7 +136,8 @@ types <- read_csv("./data/bremen_biofouling_type.csv", show_col_types = FALSE)
 types <- types %>% 
   mutate(across(where(is.double), ~replace_na(.x,0))) %>% #replace NA values with 0
   mutate(date = mdy(date)) %>% #convert column to date format
-  mutate(gear=as.factor(gear), trt=as.factor(trt), location=as.factor(location), slippers=slipper, .keep="unused") #convert to factors and rename column for consistency
+  mutate(gear=factor(gear, levels=c('BP', 'FC', 'FB')),
+         trt=as.factor(trt), location=as.factor(location), slippers=slipper, .keep="unused") #convert to factors and rename column for consistency
 
 ##Turn missing rows into explicit 0s
 grid <- expand_grid(date=unique(types$date), 
@@ -144,13 +163,13 @@ types_means <- types_long %>%
 ggplot(data=types_means  %>% 
          mutate(organism=case_match(organism, "slippers"~"snails", .default = organism)))+
   geom_bar(aes(x=gear,y=mean,color=str_to_title(organism), fill=str_to_title(organism)), stat="identity", position="dodge", alpha=0.5)+
-  geom_errorbar(aes(x=gear,ymin=mean-se,ymax=mean+se,color=str_to_title(organism)), position=position_dodge(0.9), width=0.25, show.legend = FALSE)+
+  geom_errorbar(aes(x=factor(gear, levels=c('BP', 'FC', 'FB')),ymin=mean-se,ymax=mean+se,color=str_to_title(organism)), position=position_dodge(0.9), width=0.25, show.legend = FALSE)+
   facet_wrap(~location, labeller = labeller(location=c("in"="Inside", "out"="Outside")))+
   theme_bw()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), text = element_text(size=13),
         axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
         axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)))+
-  labs(x="Gear type", y="Mean num per oyster", fill=NULL, color=NULL)+
+  labs(x="Gear type", y="Mean # per oyster", fill=NULL, color=NULL)+
   scale_color_manual(values=pnw_palette("Sailboat",4))+
   scale_fill_manual(values=pnw_palette("Sailboat",4))
 
@@ -168,9 +187,27 @@ ratios <- ratios_raw %>% mutate(fouling_wt = dirty_wt_boat-clean_wt_boat,
                                 date = as.factor(date), .keep="unused")
 
 #remove negative values 
-#and one highly influential outlier likely resulting from measurement/recording error
-ratios <- ratios %>% filter(prop_fouling>0 & prop_fouling<60) 
+ratios <- ratios %>% filter(prop_fouling>0) 
 
+# FIGURE 3 -  Fouling ratio by gear type on each sampling date
+ggplot(data=ratios)+
+  geom_boxplot(aes(x=factor(gear, levels=c('BP', 'FC', 'FB')), 
+                   y=prop_fouling, color=loc))+
+  facet_wrap(~factor(date, levels=c('8/15/22', '10/17/22')))+
+  theme_bw()+
+  theme(text = element_text(size=13),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)))+
+  labs(x="Gear type",
+       y=bquote("Fouling ratio (g fouling"~g^-1~ "oyster WW)"),
+       color="Location")+
+  scale_color_manual(values=pnw_palette(name="Sailboat",n=4,type="discrete")[c(2,4)],
+                     labels=c("Inside", "Outside"))
+
+# mean fouling ratio for FB outside the pount in October
+ratios %>% 
+  filter(date == "10/17/22", gear=="FB", loc=="out") %>% 
+  summarize(mean = mean(prop_fouling))
 
 ## Model formulation ####
 

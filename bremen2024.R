@@ -588,7 +588,7 @@ g1 <- g_data %>%
 # ggplot()+
 #   geom_line(data=g1, aes(x=date, y=height_mean, color=location, linetype = gear))
 # ggplot()+
-#   geom_boxplot(data=g1, aes(x=gear, y=height, color=location))+facet_wrap(~date)
+#   geom_boxplot(data=g1, aes(x=gear, y=height_mean, color=location))+facet_wrap(~date)
 # 
 # ggplot()+
 #   geom_line(data=g1, aes(x=date, y=cup_ratio_mean, color=location, linetype = gear))
