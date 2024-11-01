@@ -221,17 +221,24 @@ types_means <- types_long %>%
             se = plotrix::std.error(num))
 
 # FIGURE 5 - Mean (±SE) number of each organism per oyster
-ggplot(data = types_means  %>%
-         mutate(organism = case_match(organism, "slippers" ~ "snails", .default = organism))) +
-  geom_bar(aes(x = gear, y = mean, color = str_to_title(organism), fill = str_to_title(organism)),
+types_means  %>%
+  mutate(organism = case_match(organism, "slippers" ~ "snails", .default = organism)) %>% 
+ggplot() +
+  geom_bar(aes(x = gear,
+               y = mean,
+               color = str_to_title(organism),
+               fill = str_to_title(organism)),
     stat = "identity",
     position = "dodge",
     alpha = 0.5) +
-  geom_errorbar(aes(x = factor(gear, levels = c('BP', 'FC', 'FB')), ymin = mean - se, 
-        ymax = mean + se, color = str_to_title(organism)),
-    position = position_dodge(0.9), width = 0.25, show.legend = FALSE) +
-  facet_wrap( ~ location, labeller = labeller(location = c("in" = "Inside", "out" =
-                                                             "Outside"))) +
+  geom_errorbar(aes(x = factor(gear, levels = c('BP', 'FC', 'FB')),
+                    ymin = mean - se, 
+                    ymax = mean + se,
+                    color = str_to_title(organism)),
+                position = position_dodge(0.9),
+                width = 0.25, show.legend = FALSE) +
+  facet_wrap(~ location, labeller = labeller(location = c("in" = "Inside", "out" =
+                                                            "Outside"))) +
   theme_bw() +
   theme(
     panel.grid.major = element_blank(),
@@ -371,6 +378,8 @@ performance::check_residuals(mod2)
 
 # Posterior predictive checks
 ppcheck_plot <- performance::check_predictions(mod2, iterations = 1000)
+ppcheck_list <- as.list(ppcheck_plot)
+ppcheck_data <- see::data_plot(ppcheck_plot, "density") %>% mutate(key = if_else(key =="Observed data", "Observations", key))
 
 plot(ppcheck_plot) +
   see::theme_lucid(
@@ -383,6 +392,36 @@ plot(ppcheck_plot) +
        subtitle = NULL,
        x = "Fouling ratio") +
   scale_color_manual(values = c("#7bbcd5", "black"))
+
+
+ggplot(ppcheck_data) + stat_density(
+    mapping = aes(
+      x = .data$values,
+      group = .data$grp,
+      color = .data$key,
+      linewidth = .data$key,
+      alpha = .data$key),
+    geom = "line", position = "identity", bw = "nrd") +
+  scale_y_continuous() +
+  scale_color_manual(values = c("Observations" = "black",
+                                "Model-predicted data" = "#7bbcd5")) +
+  scale_linewidth_manual(values = c("Observations" = 1.7 * 0.5,
+               "Model-predicted data" = 0.5), guide = "none") +
+  scale_alpha_manual(
+    values = c("Observations" = 1, "Model-predicted data" = 0.5),
+    guide = "none") +
+  labs(x = bquote("Fouling ratio (g fouling" ~ g ^ -1 ~ "oyster WW)"), y = "Density", color = NULL, alpha = NULL, linewidth = NULL) +
+  guides(color = guide_legend(reverse = TRUE),
+         size = guide_legend(reverse = TRUE)) + theme_classic() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    text = element_text(size = 13),
+    axis.title.y = element_text(margin = margin(0, 10, 0, 0)),
+    axis.title.x = element_text(margin = margin(10, 0, 0, 0)),
+    legend.position = "inside",
+    legend.position.inside = c(0.75, 0.5))
+
 
 # Predictive checks (posterior predictive checks, in a Bayesian framework)
 # compare predictions from the fitted model to the actual observed data. If the
